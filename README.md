@@ -1,7 +1,23 @@
-## Stengel
-### Granular Baseball Analysis and Simulation
+# Stengel
+## Granular Baseball Analysis and Simulation
 
 Stengel is an ongoing attempt to build a stochastic Major League Baseball simulation from the ground up, using the most granular publicly available data. The ultimate goal is to build a pitch-by-pitch simulation that includes player fatigue, injuries, and other second-order player effects.
+
+### Installation
+
+Auto-installation of depedencies is on the project roadmap, but unfortunately, installation is manual for the time being. Stengel requires the following third-party Python modules:
+
+- NumPy
+- scikit-learn
+- matplotlib
+- Tensorflow
+- progressbar2
+- PyMongo
+
+Stengel also requires access to the following non-Python dependencies:
+
+- mongodb
+
 
 ### Potential Use Cases
 
