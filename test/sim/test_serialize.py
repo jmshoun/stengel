@@ -20,7 +20,7 @@ class SerializerTestClass(serialize.DictSerialize):
 class SerializerTestSuperClass(serialize.DictSerialize):
     attribute_objects = ["f"]
 
-    def __init__(self, e, f):
+    def __init__(self, e, f=None):
         self.e = e
         self.f = f
 
@@ -50,3 +50,7 @@ class TestSerialization(unittest.TestCase):
         # match), but we can go piecemeal...
         self.assertEqual(dict_obj.e, direct_obj.e)
         self.assertEqual(dict_obj.f.__dict__, direct_obj.f.__dict__)
+
+    def test_to_dict_with_missing_recursion(self):
+        obj = SerializerTestSuperClass(11)
+        self.assertEqual(obj.as_dict(), {"e": 11})

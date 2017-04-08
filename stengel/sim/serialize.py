@@ -30,9 +30,13 @@ class DictSerialize(object):
         """Convert an object to a dictionary representation."""
         object_dict = copy.deepcopy(self.__dict__)
         # Convert the attribute objects to dictionaries recursively.
-        for k in object_dict.keys():
+        for k, v in object_dict.items():
             if k in self.attribute_objects:
-                object_dict[k] = object_dict[k].as_dict()
+                # If v is None, we cna drop it from the dict.
+                if v:
+                    object_dict[k] = v.as_dict()
+                else:
+                    del object_dict[k]
         return object_dict
 
     @classmethod
