@@ -90,3 +90,7 @@ ENV/
 
 # IDE stuff
 .idea/
+
+# Raw data for the project
+/data/
+
