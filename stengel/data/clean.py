@@ -47,7 +47,7 @@ def _retrosheet_filename(game_id, data_root):
     year = game_id[3:7]
     file_pattern = year + team + ".EV*"
     file_path = os.path.join(data_root, "retrosheet", year, file_pattern)
-    file_matches = glob.glob(file_path)[0]
+    file_matches = glob.glob(file_path)
     return file_matches[0] if len(file_matches) else None
 
 
