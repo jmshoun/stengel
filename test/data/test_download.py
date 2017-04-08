@@ -12,7 +12,8 @@ import stengel.data.download as download
 
 TEST_DATA_PATH = "_data_download/"
 
-@download.metered_delay(-0.5, 0.001)
+
+@download.metered_delay(-2.5, 0.001)
 def stub_function():
     # A stub function used to test the functionality of metered_delay
     return 42
@@ -29,8 +30,8 @@ class TestMeteredDelay(unittest.TestCase):
         time_delta = end_time - start_time
         # Allowing ten sigma on either side of the expected delay time. This should
         # essentially never fail due to random variance...
-        self.assertGreaterEqual(time_delta, math.exp(-0.51))
-        self.assertLessEqual(time_delta, math.exp(-0.49) + 0.001)
+        self.assertGreaterEqual(time_delta, math.exp(-2.51))
+        self.assertLessEqual(time_delta, math.exp(-2.49) + 0.001)
 
 
 class TestRetrosheetPlayers(unittest.TestCase):
