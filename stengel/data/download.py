@@ -67,7 +67,7 @@ def gameday_pitches(game_, destination_root="data/gameday"):
     """
 
     year, month, day = game_.metadata.year_month_day()
-    destination_path = os.path.join(destination_root, year)
+    destination_path = os.path.join(destination_root, "pitches", year)
     create_directory_if_needed(destination_path)
 
     source_url = game_.metadata.gameday_url() + "/inning/inning_all.xml"
