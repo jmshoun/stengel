@@ -44,11 +44,6 @@ class Game(object):
                             "away": self.initial_rosters["away"].as_dict()},
                 "events": [e.as_dict() for e in self.events]}
 
-    def reset(self):
-        """Reset the status of the game to as it was before the first pitch was thrown."""
-        self.game_status = game_status.GameStatus(copy.deepcopy(self.initial_rosters))
-        self._current_event_ndx = 0
-
     def __str__(self):
         return str(self.game_status)
 
@@ -59,6 +54,13 @@ class Game(object):
             database: Database in which to update the game record.
         """
         database.games.update({"metadata.id_": self.metadata.id_}, self.as_dict())
+
+    # Event handling methods
+
+    def reset(self):
+        """Reset the status of the game to as it was before the first pitch was thrown."""
+        self.game_status = game_status.GameStatus(copy.deepcopy(self.initial_rosters))
+        self._current_event_ndx = 0
 
     def next_event(self):
         """Return the next event in the game, chronologically."""
@@ -74,6 +76,62 @@ class Game(object):
         getattr(self.game_status, event.event_type)(event)
         if self.players:
             self._update_pitcher(event)
+
+    # PitchFx addition methods
+
+    def add_pitch_fx(self, gameday_directory):
+        """Add PitchFx information to the pitch event in the game.
+
+        Args:
+            gameday_directory: Root directory of GameDay pitch data.
+        """
+        pitches_by_batter = self._get_pitches_by_batter()
+        pitch_elements_by_batter = self._get_pitch_elements_by_batter(gameday_directory)
+        combined_pitches = pitch.ZipPitches(pitches_by_batter, pitch_elements_by_batter).zip()
+        self._update_pitches(combined_pitches)
+        if not self.verify_ending():
+            raise Exception("Adding PitchFx corrupted game events: " + self.metadata.id_)
+
+    def _get_pitches_by_batter(self):
+        current_batter = self.game_status.batter
+        pitches = [[]]
+        for e in self.events:
+            if e.event_type == "pitch" and e.is_over_plate():
+                if self.game_status.batter == current_batter:
+                    pitches[-1].append(e)
+                else:
+                    current_batter = self.game_status.batter
+                    pitches.append([e])
+            self.apply_event(e)
+        self.reset()
+        return [p for p in pitches if len(p)]
+
+    def _get_pitch_elements_by_batter(self, gameday_directory):
+        year, month, day = self.metadata.year_month_day()
+        gameday_file = os.path.join(gameday_directory, year, self.metadata.id_ + ".xml")
+        tree = ET.parse(gameday_file)
+        at_bats = tree.findall(".//atbat")
+        pitches = [at_bat.findall(".//pitch") for at_bat in at_bats]
+        return [p for p in pitches if len(p)]
+
+    def _update_pitches(self, new_pitches):
+        old_events = self.events
+        new_events = []
+        while len(old_events):
+            if len(new_pitches) and new_pitches[0].inserted:
+                del new_pitches[0].inserted
+                new_events.append(new_pitches.pop(0))
+            elif old_events[0].event_type == "pitch" and old_events[0].is_over_plate():
+                old_events.pop(0)
+                del new_pitches[0].inserted
+                new_events.append(new_pitches.pop(0))
+                if new_events[-1].play_on_pitch:
+                    new_events.append(old_events.pop(0))
+            else:
+                new_events.append(old_events.pop(0))
+        self.events = new_events
+
+    # Data integrity verification methods
 
     def verify_ending(self):
         """Check if the game ends immediately after the last play."""
@@ -94,6 +152,8 @@ class Game(object):
         num_events = len(self.events)
         for _ in range(num_events - 1):
             self.apply_next_event()
+
+    # Alternate constructor methods
 
     @classmethod
     def from_dict(cls, dict_, players=None):
