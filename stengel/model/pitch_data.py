@@ -43,6 +43,9 @@ class PitchDataGenerator(object):
                 bar.update(game_number)
                 self._add_game_pitches(game_record)
                 game_number += 1
+        # Convert data from list of 1-D arrays to 2-D arrays
+        for k, v in self.pitcher_data.items():
+            self.pitcher_data[k] = np.array(v)
         return self.pitcher_data
 
     def _get_game_records(self):
