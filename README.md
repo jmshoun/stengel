@@ -5,7 +5,9 @@ Stengel is an ongoing attempt to build a stochastic Major League Baseball simula
 
 ### Installation
 
-Auto-installation of depedencies is on the project roadmap, but unfortunately, installation is manual for the time being. Stengel requires the following third-party Python modules:
+If you're running Python 2.7 on Linux, installing Stengel is as easy as running `make install`. Otherwise, you'll have to manually copy the stengel/ directory to wherever you keep your local libraries.
+
+Auto-installation of depedencies is on the project roadmap, but unfortunately, it is manual for the time being. Stengel requires the following third-party Python modules:
 
 - NumPy
 - scikit-learn
