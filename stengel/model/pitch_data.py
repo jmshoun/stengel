@@ -16,6 +16,17 @@ class PitchDataGenerator(object):
     The generated data is a dictionary of arrays. THe keys are pitchers, and the values are
     NumPy arrays. Within each array, rows are pitches, and columns are variables.
     """
+
+    """List of all column names (in order) in the generated arrays."""
+    variable_names = ["inning", "outs", "balls", "strikes", "score_away_team", "score_home_team",
+                      "runner_on_first", "runner_on_second", "runner_on_third", "pitcher_id",
+                      "pitch_count_game", "pitch_count_at_bat", "pickoff_count_game",
+                      "pickoff_count_at_bat", "batter_id", "start_speed", "end_speed",
+                      "strike_zone_top", "strike_zone_bottom", "delta_x", "delta_z", "plate_x",
+                      "plate_z", "start_x", "start_y", "start_z", "velocity_x", "velocity_y",
+                      "velocity_z", "accel_x", "accel_y", "accel_z", "break_y", "break_angle",
+                      "break_length", "spin_direction", "spin_rate", "pitch_outcome"]
+
     def __init__(self, database, first_date="1900/01/01", last_date="9999/12/31"):
         """Default constructor.
 
