@@ -10,15 +10,11 @@ from 2008 through 2016.
 """
 
 import os
-import sys
-
-script_path = os.path.dirname(os.path.abspath(__file__))
-main_path = os.path.join(script_path, os.pardir, os.pardir)
-sys.path.insert(0, main_path)
 
 import stengel.data.clean as clean
 
 # Define the path to the data directory
+script_path = os.path.dirname(os.path.abspath(__file__))
 data_root = os.path.join(script_path, os.pardir, os.pardir, "data")
 
 # Games with comments that (according to the parser) mean the game ended early, when it

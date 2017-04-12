@@ -1,10 +1,4 @@
-import os
-import sys
 import argparse
-
-script_path = os.path.dirname(os.path.abspath(__file__))
-main_path = os.path.join(script_path, os.pardir, os.pardir)
-sys.path.insert(0, main_path)
 
 import stengel.data.download as download
 
