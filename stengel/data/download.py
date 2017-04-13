@@ -106,6 +106,33 @@ def retrosheet_players(destination_root="data/retrosheet"):
     return destination_path
 
 
+@metered_delay(-0.8, 0.2)
+def retrosheet_player(player_id, destination_root="data/retrosheet"):
+    """Download detailed information about a single player in the Retrosheet database.
+
+    In addition to the basic identifiers and information in the file downloaded by
+    retrosheet_players, there is also a page with detailed information about every single
+    player in the Retrosheet database. This function downloads the Retrosheet page for a
+    single player.
+
+    Args:
+        player_id: Retrosheet ID of the player record to download.
+        destination_root: Root of the path to save the file in.
+    Returns:
+        The name of the file that was created. Saves the Retrosheet file in
+        [destination_root]/players/[player_id].html.
+    """
+    source_root = "http://www.retrosheet.org/boxesetc"
+    last_initial = player_id[0].upper()
+    source_url = source_root + "/{}/P{}.htm".format(last_initial, player_id)
+
+    destination_path = os.path.join(destination_root, "players")
+    create_directory_if_needed(destination_path)
+    destination_file = os.path.join(destination_path, player_id + ".html")
+    urllib.request.urlretrieve(source_url, destination_file)
+    return destination_file
+
+
 def retrosheet_season(year, destination_root="data/retrosheet"):
     """Download a full season of Retrosheet game files.
 
