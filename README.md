@@ -15,6 +15,7 @@ Auto-installation of depedencies is on the project roadmap, but unfortunately, i
 - Tensorflow
 - progressbar2
 - PyMongo
+- BeautifulSoup (bs4)
 
 Stengel also requires access to the following non-Python dependencies:
 
