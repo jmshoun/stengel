@@ -11,6 +11,7 @@ from . import roster
 from . import play
 from . import sub
 from . import pitch
+from . import bases
 
 
 class Game(object):
@@ -195,7 +196,7 @@ class Game(object):
 
     def _update_pitcher(self, event):
         if event.event_type == "pitch":
-            if event.event_type == "pickoff":
+            if event.destination != bases.HOME_PLATE:
                 self.players.update_pitcher(self.game_status.pitcher, "pickoff")
             elif event.threw:
                 self.players.update_pitcher(self.game_status.pitcher, "pitch")

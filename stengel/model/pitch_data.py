@@ -89,8 +89,8 @@ class PitchDataGenerator(object):
         batter_info = self._batter_state(game_status)
         pitch_info = self._pitch_state(pitch)
         pitch_response = self._pitch_response(pitch)
-        return functools.reduce(np.append, [game_info, batter_info,
-                                            pitcher_info, pitch_info, pitch_response])
+        return functools.reduce(np.append, [game_info, pitcher_info, batter_info,
+                                            pitch_info, pitch_response])
 
     def _batter_state(self, game_status):
         return np.array([self._get_batter_id(game_status.batter)])
