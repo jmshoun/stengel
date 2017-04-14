@@ -2,6 +2,10 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
 import datetime
+import os
+import copy
+
+import bs4
 
 
 class Players(object):
@@ -30,6 +34,120 @@ class Players(object):
         if pitcher not in self.pitchers:
             self.pitchers[pitcher] = Pitcher(pitcher)
         getattr(self.pitchers[pitcher], event)(*args)
+
+
+class Player(object):
+    """Represent a single baseball player.
+
+    This class captures basic demographic information about a player (height, weight,
+    birth date, and so on). All information about the player's performance as a baseball
+    player is in the Pitcher, Batter, and/or Fielder classes.
+    """
+    last_name_ndx = 0
+    first_name_ndx = 1
+    id_ndx = 2
+    mlb_debut_ndx = 3
+
+    birth_date_ndx = 1
+    physical_ndx = 3
+    bats_ndx = 1
+    throws_ndx = 3
+    height_feet_ndx = 5
+    height_inches_ndx = 6
+    weight_ndx = 8
+
+    short_date_format = "%m/%d/%Y"
+    long_date_format = "%B %d, %Y"
+    iso_date_format = "%Y-%m-%d"
+
+    date_attributes = ["mlb_debut", "birth_date"]
+
+    def __init__(self, id_, first_name=None, last_name=None, birth_date=None, mlb_debut=None,
+                 bats=None, throws=None, height=None, weight=None):
+        """Default constructor."""
+        self.id_ = id_
+        self.first_name = first_name
+        self.last_name = last_name
+        self.birth_date = birth_date
+        self.mlb_debut = mlb_debut
+        self.bats = bats
+        self.throws = throws
+        self.height = height
+        self.weight = weight
+
+    @classmethod
+    def from_player_row(cls, row):
+        """Constructor from row of the Retrosheet players file.
+
+        Args:
+            row: Row from the Retrosheet players file, parsed as a list of strings.
+        """
+        last_name = row[cls.last_name_ndx]
+        first_name = row[cls.first_name_ndx]
+        id_ = row[cls.id_ndx]
+        mlb_debut = datetime.datetime.strptime(row[cls.mlb_debut_ndx], cls.short_date_format).date()
+        return cls(id_=id_, first_name=first_name, last_name=last_name, mlb_debut=mlb_debut)
+
+    @classmethod
+    def from_dict(cls, dict_):
+        """Constructor from a dictionary representation of the object."""
+        dict_ = copy.deepcopy(dict_)
+        # Convert string-dates back to dates
+        for attribute in cls.date_attributes:
+            if attribute in dict_:
+                dict_[attribute] = datetime.datetime.strptime(dict_[attribute],
+                                                              cls.iso_date_format).date()
+        return cls(**dict_)
+
+    def as_dict(self):
+        """Return a dictionary representation of the object."""
+        dict_ = copy.deepcopy(self.__dict__)
+        # Convert dates to strings for serialization.
+        for attribute in self.date_attributes:
+            if attribute in dict_:
+                dict_[attribute] = dict_[attribute].strftime(self.iso_date_format)
+        return dict_
+
+    def add_details_from_retrosheet_page(self, page_root="data/retrosheet/players",
+                                         page_file=None):
+        """Add details about a player from that player's own Retrosheet page.
+
+        Some information (like date of birth and physical characteristics) are only
+        accessible in Retrosheet from the player's individual page. This function scrapes
+        the page for information we don't already have and adds it to the Player object.
+
+        Args:
+            page_file: Filename with the player's HTML Retrosheet page.
+            page_root: Root of the directory with Retrosheet player pages.
+        """
+        if page_file is None:
+            page_file = os.path.join(page_root, self.id_ + ".html")
+        with open(page_file, "r") as infile:
+            page = infile.read()
+
+        source_soup = bs4.BeautifulSoup(page, "lxml")
+        source_table = [e.text for e in source_soup.table.find_all("td")]
+        self._add_birth_date_from_retrosheet(source_table)
+        self._add_physical_attributes_from_retrosheet(source_table)
+
+    def _add_birth_date_from_retrosheet(self, table):
+        row = table[self.birth_date_ndx]
+        # Remove place of birth
+        birth_date_string = ",".join(row.split(",")[:2])
+        # Remove leading "Born:"...
+        birth_date_string = birth_date_string[5:]
+        self.birth_date = datetime.datetime.strptime(birth_date_string,
+                                                     self.long_date_format).date()
+
+    def _add_physical_attributes_from_retrosheet(self, table):
+        row = table[self.physical_ndx]
+        tokens = row.split()
+        self.bats = tokens[self.bats_ndx]
+        self.throws = tokens[self.throws_ndx]
+        height_feet = tokens[self.height_feet_ndx]
+        height_inches = tokens[self.height_inches_ndx]
+        self.height = 12 * int(height_feet[:-1]) + int(height_inches[:-1])
+        self.weight = int(tokens[self.weight_ndx])
 
 
 class Pitcher(object):
