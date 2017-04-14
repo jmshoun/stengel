@@ -10,8 +10,8 @@ import stengel.sim.player as player
 
 # Dictionary representation of a player for testing.
 player_dict = {"id_": "cleej001", "last_name": "Cleese", "weight": 314,
-               "mlb_debut": "1970-01-01", "birth_date": "1947-03-14",
-               "bats": None, "throws": None, "first_name": None, "height": None}
+               "mlb_debut": "1970-01-01", "birth_date": None, "bats": None, "throws": None,
+               "first_name": None, "height": None}
 
 
 class TestPlayer(unittest.TestCase):
@@ -37,10 +37,8 @@ class TestPlayer(unittest.TestCase):
         self.assertEqual(test_player.last_name, "Cleese")
         self.assertEqual(test_player.weight, 314)
         self.assertEqual(test_player.mlb_debut, datetime.date(1970, 1, 1))
-        self.assertEqual(test_player.birth_date, datetime.date(1947, 3, 14))
 
     def test_player_to_dict(self):
         test_player = player.Player(id_="cleej001", last_name="Cleese", weight=314,
-                                    mlb_debut=datetime.date(1970, 1, 1),
-                                    birth_date=datetime.date(1947, 3, 14))
+                                    mlb_debut=datetime.date(1970, 1, 1))
         self.assertEqual(test_player.as_dict(), player_dict)

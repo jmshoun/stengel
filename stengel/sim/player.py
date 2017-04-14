@@ -94,7 +94,7 @@ class Player(object):
         dict_ = copy.deepcopy(dict_)
         # Convert string-dates back to dates
         for attribute in cls.date_attributes:
-            if attribute in dict_:
+            if attribute in dict_ and dict_[attribute]:
                 dict_[attribute] = datetime.datetime.strptime(dict_[attribute],
                                                               cls.iso_date_format).date()
         return cls(**dict_)
@@ -104,7 +104,7 @@ class Player(object):
         dict_ = copy.deepcopy(self.__dict__)
         # Convert dates to strings for serialization.
         for attribute in self.date_attributes:
-            if attribute in dict_:
+            if attribute in dict_ and dict_[attribute]:
                 dict_[attribute] = dict_[attribute].strftime(self.iso_date_format)
         return dict_
 
