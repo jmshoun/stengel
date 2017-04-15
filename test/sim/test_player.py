@@ -9,9 +9,11 @@ sys.path.insert(0, parent_directory)
 import stengel.sim.player as player
 
 # Dictionary representation of a player for testing.
-player_dict = {"id_": "cleej001", "last_name": "Cleese", "weight": 314,
-               "mlb_debut": "1970-01-01", "birth_date": None, "bats": None, "throws": None,
-               "first_name": None, "height": None}
+player_dict_input = {"id_": "cleej001", "last_name": "Cleese", "weight": 314,
+                     "mlb_debut": "1970-01-01", "junk_attribute": "some_value"}
+player_dict_output = {"id_": "cleej001", "last_name": "Cleese", "weight": 314,
+                      "mlb_debut": "1970-01-01", "birth_date": None, "bats": None, "throws": None,
+                      "first_name": None, "height": None, "mlb_final": None}
 
 
 class TestPlayer(unittest.TestCase):
@@ -26,13 +28,36 @@ class TestPlayer(unittest.TestCase):
         test_player = player.Player(id_="ogeac001")
         test_player.add_details_from_retrosheet_page("test_data/retrosheet/players")
         self.assertEqual(test_player.birth_date, datetime.date(1970, 11, 9))
+        self.assertEqual(test_player.mlb_final, datetime.date(1999, 10, 2))
         self.assertEqual(test_player.bats, "Right")
         self.assertEqual(test_player.throws, "Right")
         self.assertEqual(test_player.height, 74)
         self.assertEqual(test_player.weight, 200)
 
+    def test_alt_format_player_details_from_retrosheet(self):
+        test_player = player.Player(id_="adamr001")
+        test_player.add_details_from_retrosheet_page("test_data/retrosheet/players")
+        self.assertEqual(test_player.birth_date, datetime.date(1959, 1, 21))
+        self.assertEqual(test_player.mlb_final, datetime.date(1985, 10, 5))
+        self.assertEqual(test_player.bats, "Right")
+        self.assertEqual(test_player.throws, "Right")
+        self.assertEqual(test_player.height, 74)
+        self.assertEqual(test_player.weight, 180)
+
+    def test_player_details_fractional_height(self):
+        test_player = player.Player(id_="andea001")
+        test_player.add_details_from_retrosheet_page("test_data/retrosheet/players")
+        self.assertEqual(test_player.height, 71.5)
+
+    def test_player_details_no_debut(self):
+        test_player = player.Player(id_="kigem001")
+        test_player.add_details_from_retrosheet_page("test_data/retrosheet/players")
+        self.assertEqual(test_player.birth_date, datetime.date(1980, 5, 30))
+        self.assertEqual(test_player.height, 71)
+        self.assertEqual(test_player.bats, "Right")
+
     def test_player_from_dict(self):
-        test_player = player.Player.from_dict(player_dict)
+        test_player = player.Player.from_dict(player_dict_input)
         self.assertEqual(test_player.id_, "cleej001")
         self.assertEqual(test_player.last_name, "Cleese")
         self.assertEqual(test_player.weight, 314)
@@ -41,4 +66,4 @@ class TestPlayer(unittest.TestCase):
     def test_player_to_dict(self):
         test_player = player.Player(id_="cleej001", last_name="Cleese", weight=314,
                                     mlb_debut=datetime.date(1970, 1, 1))
-        self.assertEqual(test_player.as_dict(), player_dict)
+        self.assertEqual(test_player.as_dict(), player_dict_output)

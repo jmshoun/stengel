@@ -48,8 +48,6 @@ class Player(object):
     id_ndx = 2
     mlb_debut_ndx = 3
 
-    birth_date_ndx = 1
-    physical_ndx = 3
     bats_ndx = 1
     throws_ndx = 3
     height_feet_ndx = 5
@@ -60,16 +58,17 @@ class Player(object):
     long_date_format = "%B %d, %Y"
     iso_date_format = "%Y-%m-%d"
 
-    date_attributes = ["mlb_debut", "birth_date"]
+    date_attributes = ["mlb_debut", "mlb_final", "birth_date"]
 
     def __init__(self, id_, first_name=None, last_name=None, birth_date=None, mlb_debut=None,
-                 bats=None, throws=None, height=None, weight=None):
+                 mlb_final=None, bats=None, throws=None, height=None, weight=None, **kwargs):
         """Default constructor."""
         self.id_ = id_
         self.first_name = first_name
         self.last_name = last_name
         self.birth_date = birth_date
         self.mlb_debut = mlb_debut
+        self.mlb_final = mlb_final
         self.bats = bats
         self.throws = throws
         self.height = height
@@ -119,19 +118,25 @@ class Player(object):
         Args:
             page_file: Filename with the player's HTML Retrosheet page.
             page_root: Root of the directory with Retrosheet player pages.
+        Returns:
+            bool: Whether details were successfully added
         """
         if page_file is None:
             page_file = os.path.join(page_root, self.id_ + ".html")
+        if not os.path.exists(page_file):
+            return False
         with open(page_file, "r") as infile:
             page = infile.read()
 
         source_soup = bs4.BeautifulSoup(page, "lxml")
         source_table = [e.text for e in source_soup.table.find_all("td")]
         self._add_birth_date_from_retrosheet(source_table)
+        self._add_mlb_final_from_retrosheet(source_table)
         self._add_physical_attributes_from_retrosheet(source_table)
+        return True
 
     def _add_birth_date_from_retrosheet(self, table):
-        row = table[self.birth_date_ndx]
+        row = [row for row in table if row[:4] == "Born"][0]
         # Remove place of birth
         birth_date_string = ",".join(row.split(",")[:2])
         # Remove leading "Born:"...
@@ -139,14 +144,28 @@ class Player(object):
         self.birth_date = datetime.datetime.strptime(birth_date_string,
                                                      self.long_date_format).date()
 
+    def _add_mlb_final_from_retrosheet(self, table):
+        row_search = [row for row in table if row[:10] == "First Game"]
+        # Some players don't have a row with first game info
+        if not len(row_search):
+            return
+        row = row_search[0]
+        # Format of the row is "First Game: <date>; Final Game: <date>".
+        # If there's only one colon, that means the player is still active.
+        tokens = row.split(":")
+        if len(tokens) == 3:
+            mlb_final_string = tokens[2].strip()
+            self.mlb_final = datetime.datetime.strptime(mlb_final_string,
+                                                        self.long_date_format).date()
+
     def _add_physical_attributes_from_retrosheet(self, table):
-        row = table[self.physical_ndx]
+        row = [row for row in table if row[:3] == "Bat"][0]
         tokens = row.split()
         self.bats = tokens[self.bats_ndx]
         self.throws = tokens[self.throws_ndx]
         height_feet = tokens[self.height_feet_ndx]
         height_inches = tokens[self.height_inches_ndx]
-        self.height = 12 * int(height_feet[:-1]) + int(height_inches[:-1])
+        self.height = 12 * int(height_feet[:-1]) + float(height_inches[:-1])
         self.weight = int(tokens[self.weight_ndx])
 
 
