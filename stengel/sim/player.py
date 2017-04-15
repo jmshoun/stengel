@@ -168,6 +168,33 @@ class Player(object):
         self.height = 12 * int(height_feet[:-1]) + float(height_inches[:-1])
         self.weight = int(tokens[self.weight_ndx])
 
+    # Methods for dynamically calculated attributes
+
+    def age(self, evaluation_date):
+        """Return the age (in fractional years) of the player as of a given date.
+
+        I'm defining age (in years) as age (in days) divided by 365.2425. I know that this
+        isn't perfect for every application -- for example, a player's age is not
+        guaranteed to be an integer on his birthday. However, this is good enough for our
+        purposes. Age in days would be fine, and this rescaling of age_in_days makes it
+        easier to sanity-check data and interpret model results.
+        """
+        if not self.birth_date:
+            return None
+        age_in_days = (evaluation_date - self.birth_date).days
+        return age_in_days / 365.2425
+
+    def mlb_tenure(self, evaluation_date):
+        """Return the number of (floating-point) years the player has been active in the
+        MLB as of a given date.
+
+        See comments on age() about how the units are defined.
+        """
+        if not self.mlb_debut:
+            return None
+        tenure_in_days = (evaluation_date - self.mlb_debut).days
+        return tenure_in_days / 365.2425
+
 
 class Pitcher(object):
     """Represent the state of a baseball pitcher.

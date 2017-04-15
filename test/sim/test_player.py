@@ -67,3 +67,13 @@ class TestPlayer(unittest.TestCase):
         test_player = player.Player(id_="cleej001", last_name="Cleese", weight=314,
                                     mlb_debut=datetime.date(1970, 1, 1))
         self.assertEqual(test_player.as_dict(), player_dict_output)
+
+    def test_player_age_and_tenure(self):
+        test_player = player.Player(id_="cleej001", birth_date=datetime.date(1950, 2, 11),
+                                    mlb_debut=datetime.date(1978, 9, 27))
+        test_player_alt = player.Player(id_="idlee001")
+        evaluation_date = datetime.date(2017, 4, 15)
+        self.assertAlmostEqual(test_player.age(evaluation_date), 67.17455, places=4)
+        self.assertAlmostEqual(test_player.mlb_tenure(evaluation_date), 38.54973, places=4)
+        self.assertIsNone(test_player_alt.age(evaluation_date))
+        self.assertIsNone(test_player_alt.mlb_tenure(evaluation_date))
