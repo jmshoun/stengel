@@ -25,6 +25,8 @@ PINCH_RUNNER = 12
 class Roster(serialize.DictSerialize):
     """Represent a team roster and state during a baseball game.
 
+    All of the instance variable lists are lists of Retrosheet player IDs.
+
     Instance variables:
         batting: A list with the batting order for the team. The length is 10 to accommodate
             designated hitter rule. In DH games, batting[9] is the pitcher; in non-DH games,
@@ -62,7 +64,7 @@ class Roster(serialize.DictSerialize):
 
     @classmethod
     def from_retrosheet(cls, rows):
-        """Construct from a list of Retrosheet event file rows."""
+        """Constructor from a list of Retrosheet event file rows."""
         batting = [None] * 10
         # Index 0 of fielding is always NULL, the last three positions are for  the
         # designated hitter, pinch hitter, and pinch runner.
@@ -77,11 +79,11 @@ class Roster(serialize.DictSerialize):
         return cls(batting, fielding, home_team=home_team)
 
     def current_batter(self):
-        """Return the batter currently at the plate."""
+        """Return the Retrosheet ID of the batter currently at the plate."""
         return self.batting[self.current_batting_index]
 
     def current_pitcher(self):
-        """Return the pitcher currently on the mound."""
+        """Return the Retrosheet ID of the pitcher currently on the mound."""
         return self.fielding[PITCHER]
 
     def move_to_next_batter(self):
@@ -95,7 +97,7 @@ class Roster(serialize.DictSerialize):
         Arguments:
             sub: A Substitution object with the details on the substitution.
         Returns:
-            ID of the player that was replaced
+            Retrosheet ID of the player that was replaced
         """
         old_player = self.batting[sub.batting]
         # Retrosheet substitution semantics allow for a pinch hitter to sub for himself

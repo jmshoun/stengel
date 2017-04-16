@@ -20,8 +20,8 @@ class Bases(object):
     """Track the state of the bases within a baseball game.
 
     Instance variables:
-        bases: A 3-vector, with each value either a Player (the player currently on the
-                base), or None (the base is empty).
+        bases: A 3-vector, with each value either a Retrosheet player ID (representing the
+            player on base), or None (the base is empty).
     """
     def __init__(self):
         """Default constructor."""
@@ -31,7 +31,7 @@ class Bases(object):
         """Update the state of the bases to reflect a hit or base running play.
 
         Arguments:
-            batter: A Player object.
+            batter: A Retrosheet player ID.
             advance: An Advance object.
         Returns:
             A 2-tuple with the number of runs scored and outs made, respectively.
@@ -73,7 +73,7 @@ class Bases(object):
         """Update the state of bases to reflect a walk.
 
         Arguments:
-            batter: A Player representing the batter who was walked.
+            batter: A Retrosheet player ID representing the batter who was walked.
         Returns:
             The number of runs forced in by the walk.
         """
@@ -115,8 +115,8 @@ class Bases(object):
         """Handle a pinch-running substitution.
 
         Args:
-            old_player: Player leaving the game.
-            new_player: Player entering the game.
+            old_player: Retrosheet ID of the player leaving the game.
+            new_player: Retrosheet ID of the player entering the game.
         """
         for base in [FIRST_BASE, SECOND_BASE, THIRD_BASE]:
             if self.bases[base] == old_player:

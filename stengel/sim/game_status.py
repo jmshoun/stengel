@@ -22,8 +22,8 @@ class GameStatus(object):
         game_over: Boolean; whether the game is over.
         last_batter_charged: Dict with keys "home" and "away"; for each team, whether the last
             batter at the plate was charged with a plate appearance.
-        batter: Batter currently at the plate.
-        pitcher: Pitcher currently on the mound.
+        batter: Retrosheet player ID of the batter currently at the plate.
+        pitcher: Retrosheet player ID of the pitcher currently on the mound.
     """
     def __init__(self, rosters, players=None):
         """Default constructor.

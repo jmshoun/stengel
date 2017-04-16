@@ -5,7 +5,14 @@ from . import serialize
 
 
 class Substitution(serialize.DictSerialize):
-    """Represent a player substitution in a baseball game."""
+    """Represent a player substitution in a baseball game.
+
+    Instance Attributes:
+        player_id: Retrosheet ID of the player entering the game.
+        team: Team of the player, either "home" or "away".
+        batting: Batting order position of the entering player.
+        fielding: Fielding position of the entering player.
+    """
     player_ndx = 1
     team_ndx = 3
     batting_ndx = 4
@@ -30,7 +37,13 @@ class Substitution(serialize.DictSerialize):
 
 
 class HandednessAdjustment(serialize.DictSerialize):
-    """Represent an unexpected change in handedness from a pitcher or batter."""
+    """Represent an unexpected change in handedness from a pitcher or batter.
+
+    Instance attributes:
+        handedness: New handedness status of the player.
+        position: Whether the position of the player switching hands is the pitcher or the
+            batter.
+    """
     position_ndx = 0
     handedness_ndx = 2
 

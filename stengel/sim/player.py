@@ -27,7 +27,7 @@ class Players(object):
         """Update a pitcher's status in light of an event.
 
         Args:
-            pitcher: The ID of the pitcher to update.
+            pitcher: The Retrosheet ID of the pitcher to update.
             event: string: The name of the event to update the pitcher with regard to.
             *args: Any other information about the event.
         """
