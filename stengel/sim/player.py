@@ -17,23 +17,51 @@ class Players(object):
     an as-needed basis, and so that the player-as-pitcher, player-as-fielder, and
     player-as-batter can remain distinct entities.
     """
-    def __init__(self, pitchers=None, batters=None, fielders=None):
+    def __init__(self, pitchers=None, batters=None, fielders=None, runners=None):
         """Default constructor."""
         self.pitchers = pitchers if pitchers else {}
         self.batters = batters if batters else {}
         self.fielders = fielders if fielders else {}
+        self.runners = runners if runners else {}
 
-    def update_pitcher(self, pitcher, event, *args):
-        """Update a pitcher's status in light of an event.
+    def update(self, event):
+        """Update the set of players to reflect a new event.
 
         Args:
-            pitcher: The Retrosheet ID of the pitcher to update.
-            event: string: The name of the event to update the pitcher with regard to.
-            *args: Any other information about the event.
+            event: A BoxScoreEvent object.
         """
+        if event.pitcher:
+            self._update_pitcher(event.pitcher, event)
+        if event.batter:
+            self._update_batter(event.batter, event)
+        if event.runner:
+            self._update_runner(event.batter, event)
+        if event.fielders:
+            self._update_fielders(event.fielders, event)
+
+    def _update_pitcher(self, pitcher, event):
         if pitcher not in self.pitchers:
             self.pitchers[pitcher] = Pitcher(pitcher)
-        getattr(self.pitchers[pitcher], event)(*args)
+        self.pitchers[pitcher].update(event)
+
+    def _update_batter(self, batter, event):
+        if batter not in self.batters:
+            self.batters[batter] = Batter(batter)
+        self.batters[batter].update(event)
+
+    def _update_runner(self, runner, event):
+        if runner not in self.runners:
+            self.runners[runner] = Runner(runner)
+        self.runners[runner].update(event)
+
+    def _update_fielders(self, fielders, event):
+        for fielder in fielders:
+            self._update_fielder(fielder, event)
+
+    def _update_fielder(self, fielder, event):
+        if fielder not in self.fielders:
+            self.fielders[fielder] = Fielder(fielder)
+        self.fielders[fielder].update(event)
 
 
 class Player(object):
@@ -196,57 +224,96 @@ class Player(object):
         return tenure_in_days / 365.2425
 
 
-class Pitcher(object):
-    """Represent the state of a baseball pitcher.
+class PlayerRole(object):
+    """Represent the state of one player-role: for example, batter, pitcher, or runner.
 
-    Lots of interesting baseball analysis depends on the internal state of players, and
-    pitchers are the most obvious example of this. Knowing how many pitches a pitcher has
-    thrown in a game are critical to modeling his effectiveness on the mound. This class
-    tracks basic pitcher state over time.
+    This is a superclass for specific Batter, Pitcher, Fielder, and Runner classes, and
+    should rarely be called directly. This handles functionality common to all of the
+    subclasses.
+
+    Attributes:
+        id_: Retrosheet ID of the player being represented.
+        event_counters: Dict where keys are types of events and values are the number of
+            times the corresponding event has occurred.
     """
     def __init__(self, id_):
         """Default constructor."""
         self.id_ = id_
+        self.event_counters = {}
 
-        # These -1s are are here to ensure that end-users never see a pitcher's uninitialized state.
-        self.pitch_count_game = -1
-        self.pickoff_count_game = -1
-        self.pitch_count_at_bat = -1
-        self.pickoff_count_at_bat = -1
-        # Keep track of the most recent game.
-        self.last_game_date = datetime.date(1900, 1, 1)
-        self.days_since_last_game = None
-        self.pitches_at_last_game = None
+    def update(self, event):
+        """Update the player role to account for a new event.
 
-    def call(self, game_date):
-        """Call a pitcher from the bullpen to the mound.
+        If the player role class has specifically defined behavior for that class of event,
+        the custom logic is used. Otherwise, fallback logic for generic events is applied.
 
-        This method should also be called on starting pitchers at the beginning of the game.
         Args:
-            game_date: The date the game takes place.
+            event: a BoxScoreEvent object.
         """
-        # When the first is called, the pitcher initially has the state he did at the end of
-        # the previous game.
-        game_date = datetime.datetime.strptime(game_date, "%Y/%m/%d").date()
-        self.pitches_at_last_game = self.pitch_count_game
-        self.days_since_last_game = (game_date - self.last_game_date).days
-        # Set up the pitcher with values to reflect the new game.
-        self.last_game_date = game_date
+        event_method = "_update_" + event.name
+        if getattr(self, event_method, None):
+            getattr(self, event_method)(event)
+        else:
+            self._update_generic(event)
+
+    def _update_generic(self, event):
+        # Implement default behavior: increment or decrement the relevant event counter, as
+        # appropriate.
+        if event.name not in self.event_counters:
+            self.event_counters[event.name] = 0
+        delta = -1 if event.decrement else 1
+        self.event_counters[event.name] += delta
+
+
+class Pitcher(PlayerRole):
+    """Represent the state of a baseball pitcher."""
+    def __init__(self, id_):
+        """Default constructor."""
+        super(Pitcher, self).__init__(id_)
+        self.pitch_count_game = None
+        self.pickoff_count_game = None
+        self.pitch_count_at_bat = None
+        self.pickoff_count_at_bat = None
+
+        # Keep track of the most recent game.
+        self.last_game_date = None
+        self.days_since_last_game = None
+        self.pitches_at_last_game = 0
+
+    def _update_call_pitcher(self, event):
+        if self.last_game_date:
+            self.pitches_at_last_game = self.pitch_count_game
+            self.days_since_last_game = (event.date - self.last_game_date).days
+        self.last_game_date = event.date
+
         self.pitch_count_game = 0
         self.pickoff_count_game = 0
-        self.next_batter()
-
-    def next_batter(self):
-        """Update the pitcher when the next batter reaches the plate."""
         self.pitch_count_at_bat = 0
         self.pickoff_count_at_bat = 0
 
-    def pitch(self):
-        """Update the pitcher after a pitch."""
+    def _update_plate_appearance(self, event):
+        if not event.decrement:
+            self.pitch_count_at_bat = 0
+            self.pickoff_count_at_bat = 0
+
+    def _update_pitch(self, event):
         self.pitch_count_at_bat += 1
         self.pitch_count_game += 1
+        self._update_generic(event)
 
-    def pickoff(self):
-        """Update the pitcher after a pickoff."""
+    def _update_pickoff(self, event):
         self.pickoff_count_at_bat += 1
         self.pickoff_count_game += 1
+        self._update_generic(event)
+
+
+class Batter(PlayerRole):
+    pass
+
+
+class Runner(PlayerRole):
+    pass
+
+
+class Fielder(PlayerRole):
+    pass
