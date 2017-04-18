@@ -3,6 +3,7 @@ from __future__ import (absolute_import, division,
 
 from . import bases
 from . import roster
+from . import box_score_event as bse
 
 
 class GameStatus(object):
@@ -10,7 +11,6 @@ class GameStatus(object):
 
     Attributes:
         rosters: Dict with structure {"home": [home team roster], "away": [away team roster]}.
-        players: Players object.
         inning: Current inning.
         team_at_bat: Team currently at bat; either "home" or "away".
         team_fielding: Team current fielding; either "home" or "away".
@@ -24,20 +24,23 @@ class GameStatus(object):
             batter at the plate was charged with a plate appearance.
         batter: Retrosheet player ID of the batter currently at the plate.
         pitcher: Retrosheet player ID of the pitcher currently on the mound.
+        game_date: Date that the game is being played. This information is is static over
+            the course of the game, and is duplicated from GameMetadata, but is the least
+            worst solution to generating BoxScoreEvents that need dates.
     """
-    def __init__(self, rosters, players=None):
+    def __init__(self, rosters, game_date):
         """Default constructor.
 
         Args:
             rosters: Dict with keys "home" and "away"; values are Roster objects with the
                 respective team rosters.
-            players: Players object.
+            game_date: Date the game is being played.
         """
         self.rosters = rosters
-        self.players = players
         self.inning = 1
         self.team_at_bat = "away"
         self.team_fielding = "home"
+        self._update_plate_matchup()
 
         self.score = {"home": 0,
                       "away": 0}
@@ -48,8 +51,13 @@ class GameStatus(object):
         self.game_over = False
         self.last_batter_charged = {"home": True,
                                     "away": True}
+        self.game_date = game_date
 
-        self._update_plate_matchup()
+        self.event_buffer = []
+        self.event_buffer.append(bse.CallPitcher(self.pitcher, self.game_date))
+        away_pitcher = self.rosters["away"].fielding[roster.PITCHER]
+        self.event_buffer.append(bse.CallPitcher(away_pitcher, self.game_date))
+        self.event_buffer.append(bse.PlateAppearance(self.pitcher, self.batter))
 
     def __str__(self):
         """Stringification/pretty printing method."""
@@ -66,6 +74,8 @@ class GameStatus(object):
         """Execute a substitution event."""
         old_player = self.rosters[event.team].substitute(event)
         new_player = event.player_id
+        if event.fielding == roster.PITCHER:
+            self.event_buffer.append(bse.CallPitcher(new_player, self.game_date))
         if old_player != new_player:
             self._replace_old_player(old_player, new_player)
 
@@ -93,50 +103,58 @@ class GameStatus(object):
 
     def pitch(self, event):
         """Execute a pitch event."""
-        getattr(self, event.pitch_event)()
+        getattr(self, event.pitch_event)(event)
         if not event.play_on_pitch:
             self._update_batter()
 
     # Methods to handle specific types of pitches
 
-    def foul(self):
+    def foul(self, pitch):
         """Process a foul ball event."""
+        self.event_buffer.append(bse.Pitch(self.pitcher))
         if self.strikes < 2:
             self.strikes += 1
 
-    def strike(self):
+    def strike(self, pitch):
         """Process a strike event."""
+        self.event_buffer.append(bse.Pitch(self.pitcher))
         self.strikes += 1
 
-    def foul_bunt(self):
+    def foul_bunt(self, pitch):
         """Process a foul bunt event."""
+        self.event_buffer.append(bse.Pitch(self.pitcher))
         self.strikes += 1
 
-    def ball(self):
+    def ball(self, pitch):
         """Process a ball event."""
+        self.event_buffer.append(bse.Pitch(self.pitcher))
         self.balls += 1
 
-    def hit_by_pitch(self):
+    def hit_by_pitch(self, pitch):
         """Process a hit_by_pitch event."""
+        self.event_buffer.append(bse.Pitch(self.pitcher))
+        self.event_buffer.append(bse.HitByPitch(self.pitcher, self.batter))
         self.score[self.team_at_bat] += self.bases.walk(self.batter)
         self.game_over = self._home_team_won()
         self._next_batter()
 
-    def balk(self):
+    def balk(self, pitch):
         """Process a balk event."""
+        self.event_buffer.append(bse.Balk(self.pitcher))
         self.score[self.team_at_bat] += self.bases.balk()
         self.game_over = self._home_team_won()
 
-    def contact(self):
+    def contact(self, pitch):
         """Process a contact event."""
-        # Empty because all of the interesting information is contained in the batted_ball
-        # event that will immediately follow.
-        pass
+        # All of the interesting information is contained in the batted_ball event that
+        # will immediately follow.
+        self.event_buffer.append(bse.Pitch(self.pitcher))
 
-    def pickoff(self):
-        # Empty because if there's any interesting outcome from the pickoff, it will be in
-        # a base_running event that will immediately follow.
-        pass
+    def pickoff(self, pitch):
+        # Any interesting outcome from the pickoff will be in a base_running event that
+        # will immediately follow.
+        runner = self.bases.bases[pitch.destination]
+        self.event_buffer.append(bse.Pickoff(self.pitcher, runner))
 
     # Getter methods
 
@@ -151,6 +169,12 @@ class GameStatus(object):
     def away_pitcher(self):
         """Return the away team's current pitcher."""
         return self.rosters["away"].fielding[roster.PITCHER]
+
+    def clear_event_buffer(self):
+        """Clear the (BoxScoreEvent) event buffer and return the contents."""
+        events = [e for e in self.event_buffer]
+        self.event_buffer = []
+        return events
 
     # Support methods
 
@@ -170,14 +194,17 @@ class GameStatus(object):
         elif self.outs >= 3:
             # If we're over three outs not because of the batter (i.e., a runner caught
             # stealing, the batter isn't charged with a plate appearance.
+            self.event_buffer.append(bse.PlateAppearance(self.pitcher, self.batter, decrement=True))
             self.last_batter_charged[self.team_at_bat] = False
             self._next_batter()
 
     def _strikeout(self):
+        self.event_buffer.append(bse.Strikeout(self.pitcher, self.batter))
         self.outs += 1
         self._next_batter()
 
     def _walk(self):
+        self.event_buffer.append(bse.Walk(self.pitcher, self.batter))
         self.score[self.team_at_bat] += self.bases.walk(self.batter)
         self.game_over = self._home_team_won()
         self._next_batter()
@@ -191,8 +218,6 @@ class GameStatus(object):
     def _next_batter(self):
         self.balls = 0
         self.strikes = 0
-        if self.players:
-            self.players.update_pitcher(self.pitcher, "next_batter")
 
         if self._is_half_inning_over():
             self._switch_sides()
@@ -201,6 +226,7 @@ class GameStatus(object):
         else:
             self.last_batter_charged[self.team_at_bat] = True
         self._update_plate_matchup()
+        self.event_buffer.append(bse.PlateAppearance(self.pitcher, self.batter))
 
     def _switch_sides(self):
         self.team_at_bat, self.team_fielding = self.team_fielding, self.team_at_bat

@@ -31,12 +31,7 @@ class Game(object):
         self._current_event_ndx = 0
         self.initial_rosters = rosters
         self.players = players
-        self.game_status = game_status.GameStatus(copy.deepcopy(rosters), players)
-        if self.players:
-            self.players.update_pitcher(self.game_status.home_pitcher(), "call",
-                                        self.metadata.game_date)
-            self.players.update_pitcher(self.game_status.away_pitcher(), "call",
-                                        self.metadata.game_date)
+        self.game_status = game_status.GameStatus(copy.deepcopy(rosters), self.metadata.game_date)
 
     def as_dict(self):
         """Return a dictionary representation of the game."""
@@ -76,7 +71,13 @@ class Game(object):
         """Apply a supplied event to the current game status."""
         getattr(self.game_status, event.event_type)(event)
         if self.players:
-            self._update_pitcher(event)
+            self.apply_box_score_events()
+
+    def apply_box_score_events(self):
+        """Apply all box score events currently in the game status event buffer."""
+        box_score_events = self.game_status.clear_event_buffer()
+        for e in box_score_events:
+            self.players.update(e)
 
     # PitchFx addition methods
 
@@ -193,12 +194,3 @@ class Game(object):
     @staticmethod
     def _from_dict_game_called(dict_):
         return play.GameCalled.from_dict(dict_)
-
-    def _update_pitcher(self, event):
-        if event.event_type == "pitch":
-            if event.destination != bases.HOME_PLATE:
-                self.players.update_pitcher(self.game_status.pitcher, "pickoff")
-            elif event.threw:
-                self.players.update_pitcher(self.game_status.pitcher, "pitch")
-        elif event.event_type == "substitution" and event.fielding == roster.PITCHER:
-            self.players.update_pitcher(event.player_id, "call", self.metadata.game_date)
