@@ -20,7 +20,7 @@ class BoxScoreEvent(object):
     count.
 
     Attributes:
-        event_name: Brief name of the event.
+        name: Brief name of the event.
         pitcher: string: The Retrosheet player ID of the pitcher involved. None if no pitcher
             is involved.
         batter: string: The Retrosheet player ID of the batter involved. None if no batter
