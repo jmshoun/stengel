@@ -41,6 +41,9 @@ class GameMetadata(serialize.DictSerialize):
     value_ndx = 2
     id_ndx = 1
 
+    time_format = "%I:%M%p"
+    date_format = "%Y/%m/%d"
+
     def __init__(self, **kwargs):
         """Construct from a set of named arguments."""
         for name in self.variable_map.values():
@@ -48,7 +51,9 @@ class GameMetadata(serialize.DictSerialize):
             setattr(self, name, value)
         # Convert time objects from strings.
         if self.start_time:
-            self.start_time = datetime.datetime.strptime(self.start_time, "%I:%M%p").time()
+            self.start_time = datetime.datetime.strptime(self.start_time, self.time_format).time()
+        if self.game_date:
+            self.game_date = datetime.datetime.strptime(self.game_date, self.date_format).date()
 
     @classmethod
     def from_retrosheet(cls, rows):
@@ -68,11 +73,7 @@ class GameMetadata(serialize.DictSerialize):
 
     def year_month_day(self):
         """Return the year, month, and day (as integers) of the date the game was played."""
-        # game_date is YYYY-MM-DD.
-        year = self.game_date[0:4]
-        month = self.game_date[5:7]
-        day = self.game_date[8:10]
-        return year, month, day
+        return self.game_date.year, self.game_date.month, self.game_date.day
 
     def gameday_id(self):
         """Get the MLB GameDay ID of the game."""
@@ -94,5 +95,7 @@ class GameMetadata(serialize.DictSerialize):
         metadata_dict = super(GameMetadata, self).as_dict()
         # Convert the start time back to a string if necessary.
         if self.start_time:
-            metadata_dict["start_time"] = self.start_time.strftime("%I:%M%p")
+            metadata_dict["start_time"] = self.start_time.strftime(self.time_format)
+        if self.game_date:
+            metadata_dict["game_date"] = self.game_date.strftime(self.date_format)
         return metadata_dict

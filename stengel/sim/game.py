@@ -110,7 +110,7 @@ class Game(object):
 
     def _get_pitch_elements_by_batter(self, gameday_directory):
         year, month, day = self.metadata.year_month_day()
-        gameday_file = os.path.join(gameday_directory, year, self.metadata.id_ + ".xml")
+        gameday_file = os.path.join(gameday_directory, str(year), self.metadata.id_ + ".xml")
         tree = ET.parse(gameday_file)
         at_bats = tree.findall(".//atbat")
         pitches = [at_bat.findall(".//pitch") for at_bat in at_bats]
