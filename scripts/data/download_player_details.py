@@ -42,7 +42,7 @@ client = pymongo.MongoClient("mongodb://localhost:23415")
 database = client.stengel
 
 # Get list of players whose MLB debuts fall within the specified range
-player_set = database.players.find({
+player_set = database.player_info.find({
     "mlb_debut": {"$gte": args.first_date.strftime("%Y-%m-%d"),
                   "$lte": args.last_date.strftime("%Y-%m-%d")}
 })

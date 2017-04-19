@@ -1,7 +1,7 @@
 """
 Adding Player Details
 
-For each record in the MongoDB players collection, add detailed information from a Retrosheet
+For each record in the MongoDB player_info collection, add detailed information from a Retrosheet
 player detail file, if available.
 
 Prerequisites: scripts/data/download_player_details.py
@@ -19,7 +19,7 @@ client = pymongo.MongoClient("mongodb://localhost:23415")
 database = client.stengel
 
 # Get list of all players
-player_set = database.players.find()
+player_set = database.player_info.find()
 num_players = player_set.count()
 
 # Add the Retrosheet details for each player
@@ -30,7 +30,7 @@ with progressbar.ProgressBar(max_value=num_players) as bar:
         # numeric portions of IDs that are >= 801 are for coaches, managers, etc.
         id_numbers = int(player_record["id_"][5:])
         if id_numbers < 801:
-            player = stengel.sim.player.Player.from_dict(player_record)
+            player = stengel.sim.player.PlayerInfo.from_dict(player_record)
             player.add_details_from_retrosheet_page()
-            database.players.update({"id_": player.id_}, player.as_dict())
+            database.player_info.update({"id_": player.id_}, player.as_dict())
         player_number += 1

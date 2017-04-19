@@ -8,63 +8,7 @@ import copy
 import bs4
 
 
-class Players(object):
-    """Represent a pool of baseball players.
-
-    This class is intended to represent a group of players -- in practice, likely at least
-    all of the players that are active in a league at a given point in time. Players is an
-    object instead of a simple dict or list so that new players can be seamlessly inserted on
-    an as-needed basis, and so that the player-as-pitcher, player-as-fielder, and
-    player-as-batter can remain distinct entities.
-    """
-    def __init__(self, pitchers=None, batters=None, fielders=None, runners=None):
-        """Default constructor."""
-        self.pitchers = pitchers if pitchers else {}
-        self.batters = batters if batters else {}
-        self.fielders = fielders if fielders else {}
-        self.runners = runners if runners else {}
-
-    def update(self, event):
-        """Update the set of players to reflect a new event.
-
-        Args:
-            event: A BoxScoreEvent object.
-        """
-        if event.pitcher:
-            self._update_pitcher(event.pitcher, event)
-        if event.batter:
-            self._update_batter(event.batter, event)
-        if event.runner:
-            self._update_runner(event.batter, event)
-        if event.fielders:
-            self._update_fielders(event.fielders, event)
-
-    def _update_pitcher(self, pitcher, event):
-        if pitcher not in self.pitchers:
-            self.pitchers[pitcher] = Pitcher(pitcher)
-        self.pitchers[pitcher].update(event)
-
-    def _update_batter(self, batter, event):
-        if batter not in self.batters:
-            self.batters[batter] = Batter(batter)
-        self.batters[batter].update(event)
-
-    def _update_runner(self, runner, event):
-        if runner not in self.runners:
-            self.runners[runner] = Runner(runner)
-        self.runners[runner].update(event)
-
-    def _update_fielders(self, fielders, event):
-        for fielder in fielders:
-            self._update_fielder(fielder, event)
-
-    def _update_fielder(self, fielder, event):
-        if fielder not in self.fielders:
-            self.fielders[fielder] = Fielder(fielder)
-        self.fielders[fielder].update(event)
-
-
-class Player(object):
+class PlayerInfo(object):
     """Represent a single baseball player.
 
     This class captures basic demographic information about a player (height, weight,
@@ -141,7 +85,7 @@ class Player(object):
 
         Some information (like date of birth and physical characteristics) are only
         accessible in Retrosheet from the player's individual page. This function scrapes
-        the page for information we don't already have and adds it to the Player object.
+        the page for information we don't already have and adds it to the PlayerInfo object.
 
         Args:
             page_file: Filename with the player's HTML Retrosheet page.
@@ -222,6 +166,62 @@ class Player(object):
             return None
         tenure_in_days = (evaluation_date - self.mlb_debut).days
         return tenure_in_days / 365.2425
+
+
+class Players(object):
+    """Represent a pool of baseball players.
+
+    This class is intended to represent a group of players -- in practice, likely at least
+    all of the players that are active in a league at a given point in time. Players is an
+    object instead of a simple dict or list so that new players can be seamlessly inserted on
+    an as-needed basis, and so that the player-as-pitcher, player-as-fielder, and
+    player-as-batter can remain distinct entities.
+    """
+    def __init__(self, pitchers=None, batters=None, fielders=None, runners=None):
+        """Default constructor."""
+        self.pitchers = pitchers if pitchers else {}
+        self.batters = batters if batters else {}
+        self.fielders = fielders if fielders else {}
+        self.runners = runners if runners else {}
+
+    def update(self, event):
+        """Update the set of players to reflect a new event.
+
+        Args:
+            event: A BoxScoreEvent object.
+        """
+        if event.pitcher:
+            self._update_pitcher(event.pitcher, event)
+        if event.batter:
+            self._update_batter(event.batter, event)
+        if event.runner:
+            self._update_runner(event.batter, event)
+        if event.fielders:
+            self._update_fielders(event.fielders, event)
+
+    def _update_pitcher(self, pitcher, event):
+        if pitcher not in self.pitchers:
+            self.pitchers[pitcher] = Pitcher(pitcher)
+        self.pitchers[pitcher].update(event)
+
+    def _update_batter(self, batter, event):
+        if batter not in self.batters:
+            self.batters[batter] = Batter(batter)
+        self.batters[batter].update(event)
+
+    def _update_runner(self, runner, event):
+        if runner not in self.runners:
+            self.runners[runner] = Runner(runner)
+        self.runners[runner].update(event)
+
+    def _update_fielders(self, fielders, event):
+        for fielder in fielders:
+            self._update_fielder(fielder, event)
+
+    def _update_fielder(self, fielder, event):
+        if fielder not in self.fielders:
+            self.fielders[fielder] = Fielder(fielder)
+        self.fielders[fielder].update(event)
 
 
 class PlayerRole(object):

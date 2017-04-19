@@ -32,13 +32,13 @@ with open(player_file, "r") as infile:
 player_data = player_data[1:]
 
 print("Parsing Retrosheet player list...")
-players = [player.Player.from_player_row(row) for row in player_data
+players = [player.PlayerInfo.from_player_row(row) for row in player_data
            if len(row) and row[3][6:] >= "1900"]  # strftime years must be >= 1900
 print("Uploading player objects...")
-database.players.insert_many([p.as_dict() for p in players])
+database.player_info.insert_many([p.as_dict() for p in players])
 print("Creating index on id_...")
-database.games.create_index([("id_", pymongo.ASCENDING)])
+database.player_info.create_index([("id_", pymongo.ASCENDING)])
 print("Creating index on mlb_debut....")
-database.games.create_index([("mlb_debut", pymongo.ASCENDING)])
+database.player_info.create_index([("mlb_debut", pymongo.ASCENDING)])
 print("Creating index on mlb_final...")
-database.games.create_index([("mlb_final", pymongo.ASCENDING)])
+database.player_info.create_index([("mlb_final", pymongo.ASCENDING)])
