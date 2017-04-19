@@ -16,6 +16,7 @@ Auto-installation of depedencies is on the project roadmap, but unfortunately, i
 - progressbar2
 - PyMongo
 - BeautifulSoup (bs4)
+- coverage (only if you want to run make test)
 
 Stengel also requires access to the following non-Python dependencies:
 

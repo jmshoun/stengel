@@ -1,7 +1,8 @@
 .PHONY: test install clean
 
 test:
-	python -m unittest discover -s test/ -v
+	coverage run --include=stengel/* -m unittest discover -s test/; \
+    coverage report
 
 install:
 	cp -r stengel/ ~/.local/lib/python2.7/site-packages
