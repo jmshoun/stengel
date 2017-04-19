@@ -55,7 +55,8 @@ class Game(object):
 
     def reset(self):
         """Reset the status of the game to as it was before the first pitch was thrown."""
-        self.game_status = game_status.GameStatus(copy.deepcopy(self.initial_rosters))
+        self.game_status = game_status.GameStatus(copy.deepcopy(self.initial_rosters),
+                                                  self.game_status.game_date)
         self._current_event_ndx = 0
 
     def next_event(self):
@@ -145,8 +146,9 @@ class Game(object):
 
         self.apply_next_event()
         game_over = self.game_status.game_over
+        excess_outs = self.game_status.excess_outs
         self.reset()
-        return game_over
+        return game_over and not excess_outs
 
     def _fast_forward_to_penultimate_play(self):
         if self._current_event_ndx > 0:

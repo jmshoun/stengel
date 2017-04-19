@@ -27,6 +27,9 @@ class GameStatus(object):
         game_date: Date that the game is being played. This information is is static over
             the course of the game, and is duplicated from GameMetadata, but is the least
             worst solution to generating BoxScoreEvents that need dates.
+        excess_outs: Whether any play forced the total number of outs in a half-inning over
+            3. This should never happen on Retrosheet data, and is useful for checking if a
+            Retrosheet game was parsed correctly.
     """
     def __init__(self, rosters, game_date):
         """Default constructor.
@@ -52,6 +55,7 @@ class GameStatus(object):
         self.last_batter_charged = {"home": True,
                                     "away": True}
         self.game_date = game_date
+        self.excess_outs = False
 
         self.event_buffer = []
         self.event_buffer.append(bse.CallPitcher(self.pitcher, self.game_date))
@@ -77,7 +81,8 @@ class GameStatus(object):
         if event.fielding == roster.PITCHER:
             self.event_buffer.append(bse.CallPitcher(new_player, self.game_date))
         if old_player != new_player:
-            self._replace_old_player(old_player, new_player)
+            self.bases.substitute(old_player, new_player)
+        self._update_plate_matchup()
 
     def handedness_adjustment(self, event):
         """Execute a handedness adjustment event."""
@@ -178,10 +183,6 @@ class GameStatus(object):
 
     # Support methods
 
-    def _replace_old_player(self, old_player, new_player):
-        self.bases.substitute(old_player, new_player)
-        self._update_plate_matchup()
-
     def _update_plate_matchup(self):
         self.batter = self.rosters[self.team_at_bat].current_batter()
         self.pitcher = self.rosters[self.team_fielding].current_pitcher()
@@ -191,9 +192,9 @@ class GameStatus(object):
             self._strikeout()
         elif self.balls == 4:
             self._walk()
-        elif self.outs >= 3:
-            # If we're over three outs not because of the batter (i.e., a runner caught
-            # stealing, the batter isn't charged with a plate appearance.
+        elif self._is_half_inning_over():
+            # If we're at three outs not because of the batter (i.e., a runner caught
+            # stealing), the batter isn't charged with a plate appearance.
             self.event_buffer.append(bse.PlateAppearance(self.pitcher, self.batter, decrement=True))
             self.last_batter_charged[self.team_at_bat] = False
             self._next_batter()
@@ -239,6 +240,8 @@ class GameStatus(object):
         self.game_over = self._home_team_won() or self._away_team_won()
 
     def _is_half_inning_over(self):
+        if self.outs > 3:
+            self.excess_outs = True
         return self.outs >= 3
 
     def _home_team_won(self):
