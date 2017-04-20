@@ -2,6 +2,7 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
 import functools
+import datetime
 
 import progressbar
 import numpy as np
@@ -21,7 +22,10 @@ class PitchDataGenerator(object):
     variable_names = ["inning", "outs", "balls", "strikes", "score_away_team", "score_home_team",
                       "runner_on_first", "runner_on_second", "runner_on_third", "pitcher_id",
                       "pitch_count_game", "pitch_count_at_bat", "pickoff_count_game",
-                      "pickoff_count_at_bat", "batter_id", "start_speed", "end_speed",
+                      "pickoff_count_at_bat", "pitcher_age", "pitcher_mlb_tenure",
+                      "pitcher_height", "pitcher_weight", "pitcher_bats", "pitcher_throws",
+                      "batter_id", "batter_age", "batter_mlb_tenure", "batter_height",
+                      "batter_weight", "batter_bats", "batter_throws", "start_speed", "end_speed",
                       "strike_zone_top", "strike_zone_bottom", "delta_x", "delta_z", "plate_x",
                       "plate_z", "start_x", "start_y", "start_z", "velocity_x", "velocity_y",
                       "velocity_z", "accel_x", "accel_y", "accel_z", "break_y", "break_angle",
@@ -31,7 +35,7 @@ class PitchDataGenerator(object):
         """Default constructor.
 
         Args:
-            database: database object with Game records.
+            database: database object with Game and PlayerInfo records.
             first_date: First date of games to generate data from, as "YYYY/MM/DD".
             last_date: Last date of games to generate data from, as "YYYY/MM/DD".
         """
@@ -41,6 +45,7 @@ class PitchDataGenerator(object):
         self.last_date = last_date
         self.pitcher_data = {}
         self.game_records = []
+        self.player_info = {}
         self.batters = ["No Batter"]
         self.pitchers = ["No Pitcher"]
 
@@ -66,6 +71,8 @@ class PitchDataGenerator(object):
 
     def _add_game_pitches(self, game_record):
         current_game = game.Game.from_dict(game_record, self.players)
+        # Process initial calls
+        current_game.apply_box_score_events()
         while not current_game.game_status.game_over:
             event = current_game.next_event()
             if event.event_type == "pitch" and not event.intentional:
@@ -84,16 +91,38 @@ class PitchDataGenerator(object):
 
     def _complete_state(self, current_game, pitch):
         game_status = current_game.game_status
-        game_info = self._game_status_state(game_status)
-        pitcher_info = self._pitcher_state(game_status.pitcher)
-        batter_info = self._batter_state(game_status)
+        game_state = self._game_status_state(game_status)
+        pitcher_state = self._pitcher_state(game_status)
+        pitcher_info = self._pitcher_info(game_status)
+        batter_state = self._batter_state(game_status)
+        batter_info = self._batter_info(game_status)
         pitch_info = self._pitch_state(pitch)
         pitch_response = self._pitch_response(pitch)
-        return functools.reduce(np.append, [game_info, pitcher_info, batter_info,
-                                            pitch_info, pitch_response])
+        return functools.reduce(np.append, [game_state, pitcher_state, pitcher_info, batter_state,
+                                            batter_info,  pitch_info, pitch_response])
 
     def _batter_state(self, game_status):
         return np.array([self._get_batter_id(game_status.batter)])
+
+    def _batter_info(self, game_status):
+        batter_info = self._get_player_info(game_status.batter)
+        return self._player_info_to_array(batter_info, game_status)
+
+    def _pitcher_info(self, game_status):
+        pitcher_info = self._get_player_info(game_status.pitcher)
+        return self._player_info_to_array(pitcher_info, game_status)
+
+    def _player_info_to_array(self, info, game_status):
+        return np.array([info.age(game_status.game_date), info.mlb_tenure(game_status.game_date),
+                         info.height, info.weight,
+                         self._handedness_to_int(info.bats),
+                         self._handedness_to_int(info.throws)])
+
+    def _get_player_info(self, player_id):
+        if player_id not in self.player_info:
+            player_record = self.database.player_info.find_one({"id_": player_id})
+            self.player_info[player_id] = player.PlayerInfo.from_dict(player_record)
+        return self.player_info[player_id]
 
     @staticmethod
     def _pitch_state(pitch):
@@ -130,8 +159,8 @@ class PitchDataGenerator(object):
                          game_status.strikes, game_status.score["away"], game_status.score["home"]]
                         + game_status.bases_vector())
 
-    def _pitcher_state(self, pitcher):
-        pitcher_obj = self.players.pitchers[pitcher]
+    def _pitcher_state(self, game_status):
+        pitcher_obj = self.players.pitchers[game_status.pitcher]
         return np.array([self._get_pitcher_id(pitcher_obj),
                          pitcher_obj.pitch_count_game, pitcher_obj.pitch_count_at_bat,
                          pitcher_obj.pickoff_count_game, pitcher_obj.pickoff_count_at_bat])
@@ -149,3 +178,13 @@ class PitchDataGenerator(object):
         else:
             self.batters.append(batter)
             return len(self.batters) - 1
+
+    @staticmethod
+    def _handedness_to_int(handedness):
+        # Mnemonic: the choice of positive for right is the same as the number line.
+        if handedness == "Right":
+            return 1
+        elif handedness == "Left":
+            return -1
+        else:
+            return 0
