@@ -12,10 +12,10 @@ from ..sim import player
 
 
 class PitchDataGenerator(object):
-    """Generate a set of NumPy arrays with data on individual pitches.
+    """Generate a NumPy array with data on individual pitches.
 
-    The generated data is a dictionary of arrays. THe keys are pitchers, and the values are
-    NumPy arrays. Within each array, rows are pitches, and columns are variables.
+    The generated data is a two-dimensional array. Rows are pitches, and columns are
+    variables. The complete list of variable names is in PitchDataGenerator.variable_names.
     """
 
     """List of all column names (in order) in the generated arrays."""
@@ -43,7 +43,7 @@ class PitchDataGenerator(object):
         self.players = player.Players()
         self.first_date = first_date
         self.last_date = last_date
-        self.pitcher_data = {}
+        self.pitcher_data = []
         self.game_records = []
         self.player_info = {}
         self.batters = ["No Batter"]
@@ -59,9 +59,8 @@ class PitchDataGenerator(object):
                 bar.update(game_number)
                 self._add_game_pitches(game_record)
                 game_number += 1
-        # Convert data from list of 1-D arrays to 2-D arrays
-        for k, v in self.pitcher_data.items():
-            self.pitcher_data[k] = np.array(v)
+        # Convert data from list of 1-D array to 2-D array
+        self.pitcher_data = np.array(self.pitcher_data)
         return self.pitcher_data
 
     def _get_game_records(self):
@@ -84,10 +83,7 @@ class PitchDataGenerator(object):
         if not pitch.pitch_fx:
             return
         state = self._complete_state(current_game, pitch)
-        pitcher = current_game.game_status.pitcher
-        if pitcher not in self.pitcher_data:
-            self.pitcher_data[pitcher] = []
-        self.pitcher_data[pitcher].append(state)
+        self.pitcher_data.append(state)
 
     def _complete_state(self, current_game, pitch):
         game_status = current_game.game_status
