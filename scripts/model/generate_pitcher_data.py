@@ -30,22 +30,13 @@ args = parser.parse_args()
 client = pymongo.MongoClient("mongodb://localhost:23415")
 database = client.stengel
 
-generator = stengel.model.pitch_data.PitchDataGenerator(
-    database,
-    args.first_date.strftime("%Y/%m/%d"),
-    args.last_date.strftime("%Y/%m/%d")
-)
-
 print("Generating data...")
-generator.generate_data()
+generator = stengel.model.pitch_data.PitchDataGenerator(database)
+pitch_data = generator.generate_data(
+    args.first_date.strftime("%Y/%m/%d"),
+    args.last_date.strftime("%Y/%m/%d"))
 
 stengel.data.download.create_directory_if_needed("data/python")
 print("Saving pitch data...")
 with file("data/python/pitch_data.p", "wb") as outfile:
-    pickle.dump(generator.pitcher_data, outfile, pickle.HIGHEST_PROTOCOL)
-print("Saving batter lookup...")
-with file("data/python/batter_lookup.p", "wb") as outfile:
-    pickle.dump(generator.batters, outfile, pickle.HIGHEST_PROTOCOL)
-print("Saving pitcher lookup...")
-with file("data/python/pitcher_lookup.p", "wb") as outfile:
-    pickle.dump(generator.pitchers, outfile, pickle.HIGHEST_PROTOCOL)
+    pickle.dump(pitch_data, outfile, pickle.HIGHEST_PROTOCOL)
