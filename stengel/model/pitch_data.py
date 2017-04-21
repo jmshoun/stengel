@@ -68,6 +68,26 @@ class PitchData(object):
         id_map = {id_: i for i, id_ in enumerate(unique_player_ids)}
         return np.array([id_map[id_] for id_ in player_ids], dtype="int32")
 
+    def get_batch(self, batch_size):
+        """Returns a dict with the next batch_size observations in self, in a format ready
+        for ingestion by a Tensorflow model."""
+        batch_start, batch_end = self.batch_index, self.batch_index + batch_size
+        batch_data = {"pitch_data": self.pitch_data[batch_start:batch_end, :],
+                      "batter_ids": self.batter_ids[batch_start:batch_end],
+                      "pitcher_ids": self.pitcher_ids[batch_start:batch_end],
+                      "pitch_outcomes": self.pitch_outcomes[batch_start:batch_end]}
+        self._update_batch_index(batch_size)
+        return batch_data
+
+    def _update_batch_index(self, batch_size):
+        num_observations = self.pitch_outcomes.shape[0]
+        self.batch_index += batch_size
+        if self.batch_index + batch_size > num_observations:
+            self.batch_index = 0
+
+    def reset_batch_index(self):
+        self.batch_index = 0
+
 
 class PitchDataGenerator(object):
     def __init__(self, database):
