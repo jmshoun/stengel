@@ -76,10 +76,10 @@ class PitchData(object):
         """Returns a dict with the next batch_size observations in self, in a format ready
         for ingestion by a Tensorflow model."""
         batch_start, batch_end = self.batch_index, self.batch_index + batch_size
-        batch_data = {"pitch_data": self.pitch_data[batch_start:batch_end, :],
-                      "batter_ids": self.batter_ids[batch_start:batch_end],
-                      "pitcher_ids": self.pitcher_ids[batch_start:batch_end],
-                      "pitch_outcomes": self.pitch_outcomes[batch_start:batch_end]}
+        batch_data = {"pitch_data:0": self.pitch_data[batch_start:batch_end, :],
+                      "batter_ids:0": self.batter_ids[batch_start:batch_end],
+                      "pitcher_ids:0": self.pitcher_ids[batch_start:batch_end],
+                      "pitch_outcomes:0": self.pitch_outcomes[batch_start:batch_end]}
         self._update_batch_index(batch_size)
         return batch_data
 
@@ -209,13 +209,13 @@ class PitchDataGenerator(object):
 
     def _add_pitch_outcome(self, pitch):
         if pitch.pitch_event in ["ball", "hit by pitch"]:
-            outcome = 1
+            outcome = 0
         elif pitch.pitch_event == "strike":
-            outcome = 3 if pitch.swung else 2
+            outcome = 2 if pitch.swung else 1
         elif pitch.pitch_event in ["foul", "foul bunt"]:
-            outcome = 4
+            outcome = 3
         else:
-            outcome = 5
+            outcome = 4
         self.pitch_outcomes.append(outcome)
 
     @staticmethod
