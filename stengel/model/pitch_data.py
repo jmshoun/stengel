@@ -107,6 +107,16 @@ class PitchData(object):
         self.pitcher_ids = self.pitcher_ids[new_order]
         self.pitch_outcomes = self.pitch_outcomes[new_order]
 
+    def as_dict(self):
+        return {"pitch_data": self.pitch_data, "pitch_outcomes": self.pitch_outcomes,
+                "batter_ids": self.batter_ids, "pitcher_ids": self.pitcher_ids,
+                "batters": self.batters, "pitchers": self.pitchers,
+                "shuffle_each_epoch": self.shuffle_each_epoch}
+
+    @classmethod
+    def from_dict(cls, dict_):
+        return cls(**dict_)
+
 
 class PitchDataGenerator(object):
     def __init__(self, database):

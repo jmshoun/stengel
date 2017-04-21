@@ -39,4 +39,4 @@ pitch_data = generator.generate_data(
 stengel.data.download.create_directory_if_needed("data/python")
 print("Saving pitch data...")
 with file("data/python/pitch_data.p", "wb") as outfile:
-    pickle.dump(pitch_data, outfile, pickle.HIGHEST_PROTOCOL)
+    pickle.dump(pitch_data.as_dict(), outfile, pickle.HIGHEST_PROTOCOL)
