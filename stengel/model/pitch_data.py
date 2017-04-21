@@ -30,9 +30,43 @@ class PitchData(object):
         self.pitcher_ids = [] if pitcher_ids is None else pitcher_ids
         self.batter_ids = [] if batter_ids is None else batter_ids
         self.pitch_outcomes = [] if pitch_outcomes is None else pitch_outcomes
-        self.batters = ["No Batter"] if batters is None else batters
-        self.pitchers = ["No Pitcher"] if pitchers is None else pitchers
+        self.batters = [] if batters is None else batters
+        self.pitchers = [] if pitchers is None else pitchers
         # TODO: Add validation that first four elements are all the same length
+        self.batch_index = 0
+
+    def filter_rows(self, filter_, reassign_ids=True, in_place=False):
+        result = self if in_place else PitchData()
+        result.pitch_data = self.pitch_data[filter_, :]
+        result.pitcher_ids = self.pitcher_ids[filter_]
+        result.batter_ids = self.batter_ids[filter_]
+        result.pitch_outcomes = self.pitch_outcomes[filter_]
+        if reassign_ids:
+            result = self._reassign_ids(result)
+        return result
+
+    def _reassign_ids(self, result):
+        result.batters, result.batter_ids = self._compress_players(self.batters, result.batter_ids)
+        result.pitchers, result.pitcher_ids = self._compress_players(self.pitchers,
+                                                                     result.pitcher_ids)
+        return result
+
+    @classmethod
+    def _compress_players(cls, players, player_ids):
+        unique_player_ids = np.unique(player_ids)
+        players = cls._drop_unused_players(players, unique_player_ids)
+        player_ids = cls._remap_player_ids(player_ids, unique_player_ids)
+        return players, player_ids
+
+    @staticmethod
+    def _drop_unused_players(players, unique_player_ids):
+        return [player_ for id_, player_ in enumerate(players)
+                if id_ in unique_player_ids]
+
+    @staticmethod
+    def _remap_player_ids(player_ids, unique_player_ids):
+        id_map = {id_: i for i, id_ in enumerate(unique_player_ids)}
+        return np.array([id_map[id_] for id_ in player_ids], dtype="int32")
 
 
 class PitchDataGenerator(object):
@@ -99,7 +133,7 @@ class PitchDataGenerator(object):
 
     def _add_pitcher_id(self, pitcher):
         if pitcher in self.pitchers:
-            pitcher_id =  self.pitchers.index(pitcher)
+            pitcher_id = self.pitchers.index(pitcher)
         else:
             self.pitchers.append(pitcher)
             pitcher_id = len(self.pitchers) - 1
