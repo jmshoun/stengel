@@ -25,7 +25,7 @@ class PitchData(object):
                       "break_length", "spin_direction", "spin_rate", "pitch_outcome"]
 
     def __init__(self, pitch_data=None, pitcher_ids=None, batter_ids=None, pitch_outcomes=None,
-                 batters=None, pitchers=None):
+                 batters=None, pitchers=None, shuffle_each_epoch=True):
         self.pitch_data = [] if pitch_data is None else pitch_data
         self.pitcher_ids = [] if pitcher_ids is None else pitcher_ids
         self.batter_ids = [] if batter_ids is None else batter_ids
@@ -34,6 +34,9 @@ class PitchData(object):
         self.pitchers = [] if pitchers is None else pitchers
         # TODO: Add validation that first four elements are all the same length
         self.batch_index = 0
+        self.reached_end = 0
+        self.num_observations = None if self.pitch_outcomes == [] else self.pitch_outcomes.shape[0]
+        self.shuffle_each_epoch = shuffle_each_epoch
 
     def filter_rows(self, filter_, reassign_ids=True, in_place=False):
         result = self if in_place else PitchData()
@@ -41,6 +44,7 @@ class PitchData(object):
         result.pitcher_ids = self.pitcher_ids[filter_]
         result.batter_ids = self.batter_ids[filter_]
         result.pitch_outcomes = self.pitch_outcomes[filter_]
+        result.num_observations = result.pitch_outcomes.shape[0]
         if reassign_ids:
             result = self._reassign_ids(result)
         return result
@@ -80,13 +84,28 @@ class PitchData(object):
         return batch_data
 
     def _update_batch_index(self, batch_size):
-        num_observations = self.pitch_outcomes.shape[0]
         self.batch_index += batch_size
-        if self.batch_index + batch_size > num_observations:
+        if self.batch_index + batch_size > self.num_observations:
             self.batch_index = 0
+            self.reached_end = True
+            if self.shuffle_each_epoch:
+                self.shuffle()
+
+    def has_reached_end(self):
+        result = self.reached_end
+        self.reached_end = False
+        return result
 
     def reset_batch_index(self):
+        self.reached_end = False
         self.batch_index = 0
+
+    def shuffle(self):
+        new_order = np.random.permutation(self.num_observations)
+        self.pitch_data = self.pitch_data[new_order, :]
+        self.batter_ids = self.batter_ids[new_order]
+        self.pitcher_ids = self.pitcher_ids[new_order]
+        self.pitch_outcomes = self.pitch_outcomes[new_order]
 
 
 class PitchDataGenerator(object):
