@@ -10,10 +10,10 @@ class PitchOutcomeModel(object):
     num_numeric_inputs = 47
     num_outcomes = 5
 
-    def __init__(self, batch_size=32, learning_rate=0.1):
+    def __init__(self, batch_size=32, learning_rate=0.1, hidden_dim=96):
         self.batch_size = batch_size
         self.learning_rate = learning_rate
-        self.train_offset = 0
+        self.hidden_dim = hidden_dim
         self.graph = tf.Graph()
         self._build_graph()
 
@@ -26,10 +26,17 @@ class PitchOutcomeModel(object):
             pitch_outcomes = tf.placeholder(tf.int32, shape=[self.batch_size],
                                             name="pitch_outcomes")
 
-            # Transfer Layer
-            output_weight = tf.Variable(tf.random_normal([47, self.num_outcomes], stddev=0.1))
+            hidden_weight = tf.Variable(tf.random_normal([self.num_numeric_inputs,
+                                                          self.hidden_dim], stddev=0.3))
+            hidden_bias = tf.Variable(tf.random_normal([self.hidden_dim], stddev=0.1))
+            hidden_logits = tf.matmul(pitch_data, hidden_weight) + hidden_bias
+            hidden_scores = tf.nn.sigmoid(hidden_logits)
+            hidden_output = tf.nn.dropout(hidden_scores, 0.5)
+
+            output_weight = tf.Variable(tf.random_normal([self.hidden_dim, self.num_outcomes],
+                                                         stddev=0.5))
             output_bias = tf.Variable(tf.random_normal([self.num_outcomes], stddev=0.1))
-            output_logits = tf.matmul(pitch_data, output_weight) + output_bias
+            output_logits = tf.matmul(hidden_output, output_weight) + output_bias
 
             # Define loss
             cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
