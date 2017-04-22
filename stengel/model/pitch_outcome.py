@@ -10,10 +10,13 @@ class PitchOutcomeModel(object):
     num_numeric_inputs = 47
     num_outcomes = 5
 
-    def __init__(self, batch_size=32, learning_rate=0.1, hidden_nodes=[96]):
+    def __init__(self, batch_size=32, learning_rate=0.1, hidden_nodes=[96],
+                 num_batters=None, batter_embed_size=16):
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.hidden_nodes = hidden_nodes
+        self.num_batters = num_batters
+        self.batter_embed_size = batter_embed_size
         self.graph = tf.Graph()
         with self.graph.as_default():
             self._build_graph()
@@ -34,7 +37,16 @@ class PitchOutcomeModel(object):
         pitch_data = tf.placeholder(tf.float32, shape=[self.batch_size, self.num_numeric_inputs],
                                     name="pitch_data")
         pitch_outcomes = tf.placeholder(tf.int32, shape=[self.batch_size], name="pitch_outcomes")
-        return pitch_data, pitch_outcomes
+        batter_input = self._build_batter_input()
+        final_input = tf.concat([pitch_data, batter_input], 1)
+        return final_input, pitch_outcomes
+
+    def _build_batter_input(self):
+        batter_ids = tf.placeholder(tf.int32, shape=[self.batch_size], name="batter_ids")
+        batter_embedding = tf.Variable(tf.random_normal([self.num_batters,
+                                                         self.batter_embed_size]))
+        batter_embedded = tf.nn.embedding_lookup(batter_embedding, batter_ids)
+        return batter_embedded
 
     @staticmethod
     def _build_hidden_layer(hidden_input, hidden_nodes):
