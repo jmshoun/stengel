@@ -124,8 +124,8 @@ class PitchDataGenerator(object):
         self.pitcher_ids = []
         self.batter_ids = []
         self.pitch_outcomes = []
-        self.batters = ["No Batter"]
-        self.pitchers = ["No Pitcher"]
+        self.batters = []
+        self.pitchers = []
 
         self.database = database
         self.game_records = []
