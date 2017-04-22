@@ -19,6 +19,7 @@ class PitchOutcomeModel(object):
             self._build_graph()
         self.session = tf.Session(graph=self.graph)
         self.node_names = [node.name + ":0" for node in self.graph.as_graph_def().node]
+        self.initialized = False
 
     def _build_graph(self):
         data, outcomes = self._build_inputs()
@@ -62,7 +63,9 @@ class PitchOutcomeModel(object):
 
     def train(self, train_data, validation_data, training_steps=1000, print_every=200):
         with self.graph.as_default():
-            self.session.run(tf.global_variables_initializer())
+            if not self.initialized:
+                self.session.run(tf.global_variables_initializer())
+                self.initialized = True
             current_step = 0
             while current_step < training_steps:
                 self._train_steps(train_data, print_every)
