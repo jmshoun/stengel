@@ -10,7 +10,7 @@ class PitchOutcomeModel(object):
     num_numeric_inputs = 47
     num_outcomes = 5
 
-    def __init__(self, batch_size=32, learning_rate=0.1, hidden_nodes=96):
+    def __init__(self, batch_size=32, learning_rate=0.1, hidden_nodes=[96]):
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.hidden_nodes = hidden_nodes
@@ -22,8 +22,10 @@ class PitchOutcomeModel(object):
 
     def _build_graph(self):
         data, outcomes = self._build_inputs()
-        hidden_output = self._build_hidden_layer(data, self.hidden_nodes)
-        logit_output = self._build_output_layer(hidden_output)
+        hidden_outputs = [self._build_hidden_layer(data, self.hidden_nodes[0])]
+        for num_nodes in self.hidden_nodes[1:]:
+            hidden_outputs.append(self._build_hidden_layer(hidden_outputs[-1], num_nodes))
+        logit_output = self._build_output_layer(hidden_outputs[-1])
         self.loss = self._build_loss(logit_output, outcomes)
         self.optimizer = tf.train.AdagradOptimizer(self.learning_rate).minimize(self.loss)
 
@@ -36,7 +38,7 @@ class PitchOutcomeModel(object):
     @staticmethod
     def _build_hidden_layer(hidden_input, hidden_nodes):
         input_dim = hidden_input.get_shape().as_list()
-        hidden_weight = tf.Variable(tf.random_normal([input_dim[1], hidden_nodes], stddev=0.3))
+        hidden_weight = tf.Variable(tf.random_normal([input_dim[1], hidden_nodes], stddev=0.05))
         hidden_bias = tf.Variable(tf.random_normal([hidden_nodes], stddev=0.1))
         hidden_logits = tf.matmul(hidden_input, hidden_weight) + hidden_bias
         hidden_scores = tf.nn.sigmoid(hidden_logits)
@@ -46,7 +48,7 @@ class PitchOutcomeModel(object):
     def _build_output_layer(self, input_):
         input_dim = input_.get_shape().as_list()
         output_weight = tf.Variable(tf.random_normal([input_dim[1], self.num_outcomes],
-                                                     stddev=0.5))
+                                                     stddev=0.05))
         output_bias = tf.Variable(tf.random_normal([self.num_outcomes], stddev=0.1))
         output_logits = tf.matmul(input_, output_weight) + output_bias
         return output_logits
