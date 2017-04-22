@@ -16,6 +16,7 @@ class PitchOutcomeModel(object):
         self.hidden_dim = hidden_dim
         self.graph = tf.Graph()
         self._build_graph()
+        self.node_names = [node.name + ":0" for node in self.graph.as_graph_def().node]
 
     def _build_graph(self):
         with self.graph.as_default():
@@ -49,9 +50,7 @@ class PitchOutcomeModel(object):
         with tf.Session(graph=self.graph) as session:
             tf.global_variables_initializer().run()
             for step in range(training_steps):
-                input_dict = train_data.get_batch(self.batch_size)
-                del input_dict["pitcher_ids:0"]
-                del input_dict["batter_ids:0"]
+                input_dict = self.filter_input_dict(train_data.get_batch(self.batch_size))
                 _, loss = session.run([self.optimizer, self.loss], feed_dict=input_dict)
                 if not step % print_every:
                     print(step, self.score(session, validation_data))
@@ -59,9 +58,13 @@ class PitchOutcomeModel(object):
     def score(self, session, data):
         scores = []
         while not data.has_reached_end():
-            input_dict = data.get_batch(self.batch_size)
-            del input_dict["pitcher_ids:0"]
-            del input_dict["batter_ids:0"]
+            input_dict = self.filter_input_dict(data.get_batch(self.batch_size))
             loss = session.run([self.loss], feed_dict=input_dict)
             scores.append(loss)
         return math.exp(np.mean(scores))
+
+    def filter_input_dict(self, input_dict):
+        for k in input_dict.keys():
+            if k not in self.node_names:
+                del input_dict[k]
+        return input_dict
