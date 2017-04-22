@@ -38,6 +38,14 @@ class PitchData(object):
         self.num_observations = None if self.pitch_outcomes == [] else self.pitch_outcomes.shape[0]
         self.shuffle_each_epoch = shuffle_each_epoch
 
+    def pitches_per_pitcher(self):
+        """Return a list with each element the number of pitches thrown by the corresponding
+        pitcher_id."""
+        result = [0] * len(self.pitchers)
+        for pitcher_id in self.pitcher_ids.tolist():
+            result[pitcher_id] += 1
+        return result
+
     def filter_rows(self, filter_, reassign_ids=True, in_place=False):
         result = self if in_place else PitchData()
         result.pitch_data = self.pitch_data[filter_, :]
@@ -54,6 +62,15 @@ class PitchData(object):
         result.pitchers, result.pitcher_ids = self._compress_players(self.pitchers,
                                                                      result.pitcher_ids)
         return result
+
+    def filter_by_pitcher_id(self, ids, reassign_ids=True, in_place=False):
+        filter_list = [pitcher_id in ids for pitcher_id in self.pitcher_ids.tolist()]
+        filter_ = np.array(filter_list)
+        return self.filter_rows(filter_, reassign_ids, in_place)
+
+    def filter_nulls(self, reassign_ids=True, in_place=False):
+        nulls = np.isnan(self.pitch_data).any(axis=1)
+        return self.filter_rows(~nulls, reassign_ids, in_place)
 
     @classmethod
     def _compress_players(cls, players, player_ids):
