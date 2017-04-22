@@ -11,12 +11,15 @@ class PitchOutcomeModel(object):
     num_outcomes = 5
 
     def __init__(self, batch_size=32, learning_rate=0.1, hidden_nodes=[96],
-                 num_batters=None, batter_embed_size=16):
+                 num_batters=None, batter_embed_size=16,
+                 num_pitchers=None, pitcher_embed_size=16):
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.hidden_nodes = hidden_nodes
         self.num_batters = num_batters
         self.batter_embed_size = batter_embed_size
+        self.num_pitchers = num_pitchers
+        self.pitcher_embed_size = pitcher_embed_size
         self.graph = tf.Graph()
         with self.graph.as_default():
             self._build_graph()
@@ -38,7 +41,8 @@ class PitchOutcomeModel(object):
                                     name="pitch_data")
         pitch_outcomes = tf.placeholder(tf.int32, shape=[self.batch_size], name="pitch_outcomes")
         batter_input = self._build_batter_input()
-        final_input = tf.concat([pitch_data, batter_input], 1)
+        pitcher_input = self._build_pitcher_input()
+        final_input = tf.concat([pitch_data, batter_input, pitcher_input], 1)
         return final_input, pitch_outcomes
 
     def _build_batter_input(self):
@@ -47,6 +51,13 @@ class PitchOutcomeModel(object):
                                                          self.batter_embed_size]))
         batter_embedded = tf.nn.embedding_lookup(batter_embedding, batter_ids)
         return batter_embedded
+
+    def _build_pitcher_input(self):
+        pitcher_ids = tf.placeholder(tf.int32, shape=[self.batch_size], name="pitcher_ids")
+        pitcher_embedding = tf.Variable(tf.random_normal([self.num_pitchers,
+                                                          self.pitcher_embed_size]))
+        pitcher_embedded = tf.nn.embedding_lookup(pitcher_embedding, pitcher_ids)
+        return pitcher_embedded
 
     @staticmethod
     def _build_hidden_layer(hidden_input, hidden_nodes):
@@ -82,7 +93,7 @@ class PitchOutcomeModel(object):
             while current_step < training_steps:
                 self._train_steps(train_data, print_every)
                 current_step += print_every
-                print(current_step, self.score(validation_data))
+                print("{:>7} - {:0.4f}".format(current_step, round(self.score(validation_data), 4)))
 
     def _train_steps(self, train_data, num_steps):
         for _ in range(num_steps):
