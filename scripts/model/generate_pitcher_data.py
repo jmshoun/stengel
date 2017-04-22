@@ -1,6 +1,7 @@
 import argparse
 import pickle
 import datetime
+import os
 
 import pymongo
 
@@ -23,6 +24,8 @@ parser.add_argument("-f", "--first-date", type=valid_date, default="1900-01-01",
                     help="Earliest date to include in dataset, as YYYY-MM-DD.")
 parser.add_argument("-l", "--last-date", type=valid_date, default="9999-12-31",
                     help="Latest date to include in dataset, as YYYY-MM-DD.")
+parser.add_argument("-o", "--output", default="data/python/pitch_data.p",
+                    help="Name of the file to save the resulting data in.")
 
 args = parser.parse_args()
 
@@ -36,7 +39,8 @@ pitch_data = generator.generate_data(
     args.first_date.strftime("%Y/%m/%d"),
     args.last_date.strftime("%Y/%m/%d"))
 
-stengel.data.download.create_directory_if_needed("data/python")
 print("Saving pitch data...")
-with file("data/python/pitch_data.p", "wb") as outfile:
+destination_directory = os.path.join(*args.output.split("/")[-1])
+stengel.data.download.create_directory_if_needed(destination_directory)
+with file(args.output, "wb") as outfile:
     pickle.dump(pitch_data.as_dict(), outfile, pickle.HIGHEST_PROTOCOL)
