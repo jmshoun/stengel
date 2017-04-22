@@ -40,9 +40,12 @@ class PitchOutcomeModel(object):
         pitch_data = tf.placeholder(tf.float32, shape=[self.batch_size, self.num_numeric_inputs],
                                     name="pitch_data")
         pitch_outcomes = tf.placeholder(tf.int32, shape=[self.batch_size], name="pitch_outcomes")
-        batter_input = self._build_batter_input()
-        pitcher_input = self._build_pitcher_input()
-        final_input = tf.concat([pitch_data, batter_input, pitcher_input], 1)
+        inputs = [pitch_data]
+        if self.num_batters:
+            inputs.append(self._build_batter_input())
+        if self.num_pitchers:
+            inputs.append(self._build_pitcher_input())
+        final_input = tf.concat(inputs, 1)
         return final_input, pitch_outcomes
 
     def _build_batter_input(self):
