@@ -12,7 +12,7 @@ class PitchOutcomeModel(object):
 
     def __init__(self, batch_size=32, learning_rate=0.1, hidden_nodes=[96],
                  num_batters=None, batter_embed_size=16,
-                 num_pitchers=None, pitcher_embed_size=16):
+                 num_pitchers=None, pitcher_embed_size=16, density_size=None):
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.hidden_nodes = hidden_nodes
@@ -20,6 +20,8 @@ class PitchOutcomeModel(object):
         self.batter_embed_size = batter_embed_size
         self.num_pitchers = num_pitchers
         self.pitcher_embed_size = pitcher_embed_size
+        self.density_size = density_size
+
         self.graph = tf.Graph()
         with self.graph.as_default():
             self._build_graph()
@@ -45,22 +47,29 @@ class PitchOutcomeModel(object):
             inputs.append(self._build_batter_input())
         if self.num_pitchers:
             inputs.append(self._build_pitcher_input())
+        if self.density_size:
+            inputs.append(self._build_density_input())
         final_input = tf.concat(inputs, 1)
         return final_input, pitch_outcomes
 
     def _build_batter_input(self):
         batter_ids = tf.placeholder(tf.int32, shape=[self.batch_size], name="batter_ids")
         batter_embedding = tf.Variable(tf.random_normal([self.num_batters,
-                                                         self.batter_embed_size]))
+                                                         self.batter_embed_size], stddev=0.1))
         batter_embedded = tf.nn.embedding_lookup(batter_embedding, batter_ids)
         return batter_embedded
 
     def _build_pitcher_input(self):
         pitcher_ids = tf.placeholder(tf.int32, shape=[self.batch_size], name="pitcher_ids")
         pitcher_embedding = tf.Variable(tf.random_normal([self.num_pitchers,
-                                                          self.pitcher_embed_size]))
+                                                          self.pitcher_embed_size], stddev=0.1))
         pitcher_embedded = tf.nn.embedding_lookup(pitcher_embedding, pitcher_ids)
         return pitcher_embedded
+
+    def _build_density_input(self):
+        density = tf.placeholder(tf.float32, shape=[self.batch_size] + self.density_size,
+                                 name="pitch_density")
+        return density
 
     @staticmethod
     def _build_hidden_layer(hidden_input, hidden_nodes):

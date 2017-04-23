@@ -25,13 +25,14 @@ class PitchData(object):
                       "break_length", "spin_direction", "spin_rate", "pitch_outcome"]
 
     def __init__(self, pitch_data=None, pitcher_ids=None, batter_ids=None, pitch_outcomes=None,
-                 batters=None, pitchers=None, shuffle_each_epoch=True):
+                 batters=None, pitchers=None, pitch_density=None, shuffle_each_epoch=True):
         self.pitch_data = [] if pitch_data is None else pitch_data
         self.pitcher_ids = [] if pitcher_ids is None else pitcher_ids
         self.batter_ids = [] if batter_ids is None else batter_ids
         self.pitch_outcomes = [] if pitch_outcomes is None else pitch_outcomes
         self.batters = [] if batters is None else batters
         self.pitchers = [] if pitchers is None else pitchers
+        self.pitch_density = pitch_density
         # TODO: Add validation that first four elements are all the same length
         self.batch_index = 0
         self.reached_end = 0
@@ -47,7 +48,8 @@ class PitchData(object):
         return result
 
     def filter_rows(self, filter_, reassign_ids=True, in_place=False):
-        result = self if in_place else PitchData()
+        result = self if in_place else PitchData(pitchers=self.pitchers, batters=self.batters,
+                                                 pitch_density=self.pitch_density)
         result.pitch_data = self.pitch_data[filter_, :]
         result.pitcher_ids = self.pitcher_ids[filter_]
         result.batter_ids = self.batter_ids[filter_]
@@ -58,9 +60,10 @@ class PitchData(object):
         return result
 
     def _reassign_ids(self, result):
-        result.batters, result.batter_ids = self._compress_players(self.batters, result.batter_ids)
-        result.pitchers, result.pitcher_ids = self._compress_players(self.pitchers,
-                                                                     result.pitcher_ids)
+        result.batter_ids, result.batters, _ = \
+            self._compress_players(result.batter_ids, self.batters)
+        result.pitcher_ids, result.pitchers, result.pitch_density = \
+            self._compress_players(result.pitcher_ids, self.pitchers, self.pitch_density)
         return result
 
     def filter_by_pitcher_id(self, ids, reassign_ids=True, in_place=False):
@@ -73,11 +76,13 @@ class PitchData(object):
         return self.filter_rows(~nulls, reassign_ids, in_place)
 
     @classmethod
-    def _compress_players(cls, players, player_ids):
+    def _compress_players(cls, player_ids, players, density=None):
         unique_player_ids = np.unique(player_ids)
         players = cls._drop_unused_players(players, unique_player_ids)
         player_ids = cls._remap_player_ids(player_ids, unique_player_ids)
-        return players, player_ids
+        if density is not None:
+            density = density[unique_player_ids, :]
+        return player_ids, players, density
 
     @staticmethod
     def _drop_unused_players(players, unique_player_ids):
@@ -93,10 +98,13 @@ class PitchData(object):
         """Returns a dict with the next batch_size observations in self, in a format ready
         for ingestion by a Tensorflow model."""
         batch_start, batch_end = self.batch_index, self.batch_index + batch_size
+        pitcher_ids = self.pitcher_ids[batch_start:batch_end]
         batch_data = {"pitch_data:0": self.pitch_data[batch_start:batch_end, :],
                       "batter_ids:0": self.batter_ids[batch_start:batch_end],
-                      "pitcher_ids:0": self.pitcher_ids[batch_start:batch_end],
+                      "pitcher_ids:0": pitcher_ids,
                       "pitch_outcomes:0": self.pitch_outcomes[batch_start:batch_end]}
+        if self.pitch_density is not None:
+            batch_data["pitch_density:0"] = self.pitch_density[pitcher_ids, :]
         self._update_batch_index(batch_size)
         return batch_data
 
@@ -128,6 +136,7 @@ class PitchData(object):
         return {"pitch_data": self.pitch_data, "pitch_outcomes": self.pitch_outcomes,
                 "batter_ids": self.batter_ids, "pitcher_ids": self.pitcher_ids,
                 "batters": self.batters, "pitchers": self.pitchers,
+                "pitch_density": self.pitch_density,
                 "shuffle_each_epoch": self.shuffle_each_epoch}
 
     @classmethod
