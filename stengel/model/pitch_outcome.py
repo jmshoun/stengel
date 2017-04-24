@@ -1,6 +1,7 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 import math
+import datetime
 
 import numpy as np
 import tensorflow as tf
@@ -30,6 +31,7 @@ class PitchOutcomeModel(object):
         fit_log: Dictionary with names "batch_number" (list of batch numbers after which
             validation was scored) and "validation_score" (list of validation scores aligned
             with batch_number).
+        fit_time: Number of seconds taken to fit the model.
     """
     num_numeric_inputs = 47
     num_outcomes = 5
@@ -56,6 +58,7 @@ class PitchOutcomeModel(object):
         self.initialized = False
         self.fit_log = {"batch_number": [],
                         "validation_score": []}
+        self.fit_time = None
 
     def _build_graph(self):
         data, outcomes = self._build_inputs()
@@ -139,6 +142,8 @@ class PitchOutcomeModel(object):
             training_steps: Number of batches to train.
             print_every: How often to calculate and show validation results.
         """
+        start_time = datetime.datetime.now()
+
         with self.graph.as_default():
             if not self.initialized:
                 self.session.run(tf.global_variables_initializer())
@@ -151,6 +156,9 @@ class PitchOutcomeModel(object):
                 print("{:>7} - {:0.4f}".format(current_step, round(current_score, 4)))
                 self.fit_log["batch_number"].append(current_step)
                 self.fit_log["validation_score"].append(current_score)
+
+        end_time = datetime.datetime.now()
+        self.fit_time = (end_time - start_time).total_seconds()
 
     def _train_steps(self, train_data, num_steps):
         for _ in range(num_steps):
