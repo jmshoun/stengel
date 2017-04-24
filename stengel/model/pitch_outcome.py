@@ -7,6 +7,30 @@ import tensorflow as tf
 
 
 class PitchOutcomeModel(object):
+    """Model of pitch outcomes (ball, called strike, fair contact, etc.)
+
+    Attributes:
+        batch_size: Batch size for use in model fitting.
+        learning_rate: Learning rate passed to the optimizer.
+        hidden_nodes: List of ints; each element is the number of nodes in the ith hidden layer.
+        num_batters: Number of unique batter IDs in the input data. If None, batter embeddings
+            will not be used in the model.
+        batter_embed_size: Dimension of the embedding vector for each batter.
+        num_pitchers: Number of unique pitcher IDs in the input data. If None, pitcher
+            embeddings will not be used in the model.
+        pitcher_embed_size: Dimension of the embedding vector for each pitcher.
+        density_size: Dimension of the pitch density vector for each pitcher.
+        density_hidden_nodes: List of ints; each element is the number of nodes in the ith
+            hidden layer on the pitch density inputs before it's concatenated with the rest
+            of the inputs.
+        graph: Tensorflow graph object with the model graph.
+        session: Tensorflow session object.
+        node_names: List with names of all nodes in the graph.
+        initialized: bool: Whether the global variables in the graph have been initialized.
+        fit_log: Dictionary with names "batch_number" (list of batch numbers after which
+            validation was scored) and "validation_score" (list of validation scores aligned
+            with batch_number).
+    """
     num_numeric_inputs = 47
     num_outcomes = 5
 
@@ -30,6 +54,8 @@ class PitchOutcomeModel(object):
         self.session = tf.Session(graph=self.graph)
         self.node_names = [node.name + ":0" for node in self.graph.as_graph_def().node]
         self.initialized = False
+        self.fit_log = {"batch_number": [],
+                        "validation_score": []}
 
     def _build_graph(self):
         data, outcomes = self._build_inputs()
@@ -105,6 +131,14 @@ class PitchOutcomeModel(object):
         return loss
 
     def train(self, train_data, validation_data, training_steps=1000, print_every=200):
+        """Train the model.
+
+        Inputs:
+            train_data: PitchData object with training data.
+            validation_date: PitchData object with validation data.
+            training_steps: Number of batches to train.
+            print_every: How often to calculate and show validation results.
+        """
         with self.graph.as_default():
             if not self.initialized:
                 self.session.run(tf.global_variables_initializer())
@@ -113,22 +147,32 @@ class PitchOutcomeModel(object):
             while current_step < training_steps:
                 self._train_steps(train_data, print_every)
                 current_step += print_every
-                print("{:>7} - {:0.4f}".format(current_step, round(self.score(validation_data), 4)))
+                current_score = self.score(validation_data)
+                print("{:>7} - {:0.4f}".format(current_step, round(current_score, 4)))
+                self.fit_log["batch_number"].append(current_step)
+                self.fit_log["validation_score"].append(current_score)
 
     def _train_steps(self, train_data, num_steps):
         for _ in range(num_steps):
-            input_dict = self.filter_input_dict(train_data.get_batch(self.batch_size))
+            input_dict = self._filter_input_dict(train_data.get_batch(self.batch_size))
             _, loss = self.session.run([self.optimizer, self.loss], feed_dict=input_dict)
 
     def score(self, data):
+        """Score a data set through the model.
+
+        Inputs:
+            data: PitchData object with data to score.
+        Returns:
+            The model's perplexity w.r.t. data.
+        """
         scores = []
         while not data.has_reached_end():
-            input_dict = self.filter_input_dict(data.get_batch(self.batch_size))
+            input_dict = self._filter_input_dict(data.get_batch(self.batch_size))
             loss = self.session.run([self.loss], feed_dict=input_dict)
             scores.append(loss)
         return math.exp(np.mean(scores))
 
-    def filter_input_dict(self, input_dict):
+    def _filter_input_dict(self, input_dict):
         for k in input_dict.keys():
             if k not in self.node_names:
                 del input_dict[k]
