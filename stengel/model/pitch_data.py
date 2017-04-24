@@ -11,7 +11,27 @@ from ..sim import player
 
 
 class PitchData(object):
-    # List of all column names (in order) in the generated arrays.
+    """Represent data on a set of individual pitches in a format suitable for modeling
+    with Tensorflow.
+
+    Attributes:
+        pitch_data: 2D NumPy float array of pitch-level predictors.
+        pitcher_ids: 1D NumPy int array of pitcher IDs for each pitch.
+        batter_ids: 1D NumPy int array of batter IDs for each pitch.
+        pitch_outcomes: 1D NumPy int array of outcomes for each pitch.
+        batters: List of Retrosheet IDs that correspond to each batter ID.
+        pitchers: List of Retrosheet IDs that correspond to each pitcher ID.
+        pitch_density: Optional; dicionary with keys of pitcher Retrosheet IDs and values of
+            1D NumPy float arrays with a representation of that pitcher's distribution of
+            pitch types thrown.
+        batch_index: The index that the next batch should start with.
+        reached_end: Whether the end of the data was reached on the previous batch.
+        num_observations: The number of observations in the data set.
+        shuffle_each_epoch: Whether the data should be randomly shuffled after each training
+            epoch.
+    """
+
+    """List of all of the column names (in order) in pitch_data."""
     variable_names = ["inning", "outs", "balls", "strikes", "score_away_team", "score_home_team",
                       "runner_on_first", "runner_on_second", "runner_on_third", "pitch_count_game",
                       "pitch_count_at_bat", "pickoff_count_game", "pickoff_count_at_bat",
@@ -25,6 +45,7 @@ class PitchData(object):
 
     def __init__(self, pitch_data=None, pitcher_ids=None, batter_ids=None, pitch_outcomes=None,
                  batters=None, pitchers=None, pitch_density=None, shuffle_each_epoch=True):
+        """Default constructor."""
         self.pitch_data = [] if pitch_data is None else pitch_data
         self.pitcher_ids = [] if pitcher_ids is None else pitcher_ids
         self.batter_ids = [] if batter_ids is None else batter_ids
@@ -34,7 +55,7 @@ class PitchData(object):
         self.pitch_density = pitch_density
         # TODO: Add validation that first four elements are all the same length
         self.batch_index = 0
-        self.reached_end = 0
+        self.reached_end = False
         self.num_observations = None if self.pitch_outcomes == [] else self.pitch_outcomes.shape[0]
         self.shuffle_each_epoch = shuffle_each_epoch
 
@@ -47,6 +68,15 @@ class PitchData(object):
         return result
 
     def filter_rows(self, filter_, reassign_ids=True, in_place=False):
+        """Filter the dataset row-wise.
+
+        Inputs:
+            filter_: NumPy array of bools or ints with the rows to be retained.
+            reassign_ids: Whether to reassign pitcher and batter IDs to remove unused IDs.
+            in_place: Whether to perform the filtering in-place.
+        Returns:
+            A filtered copy of the data set.
+        """
         result = self if in_place else PitchData(pitchers=self.pitchers, batters=self.batters,
                                                  pitch_density=self.pitch_density)
         result.pitch_data = self.pitch_data[filter_, :]
@@ -66,11 +96,13 @@ class PitchData(object):
         return result
 
     def filter_by_pitcher_id(self, ids, reassign_ids=True, in_place=False):
+        """Filter the dataset by pitcher_id."""
         filter_list = [pitcher_id in ids for pitcher_id in self.pitcher_ids.tolist()]
         filter_ = np.array(filter_list)
         return self.filter_rows(filter_, reassign_ids, in_place)
 
     def filter_nulls(self, reassign_ids=True, in_place=False):
+        """Filter rows with any nulls/NaNs in pitch_data."""
         nulls = np.isnan(self.pitch_data).any(axis=1)
         return self.filter_rows(~nulls, reassign_ids, in_place)
 
@@ -94,7 +126,7 @@ class PitchData(object):
         return np.array([id_map[id_] for id_ in player_ids], dtype="int32")
 
     def get_batch(self, batch_size):
-        """Returns a dict with the next batch_size observations in self, in a format ready
+        """Return a dict with the next batch_size observations in self, in a format ready
         for ingestion by a Tensorflow model."""
         batch_start, batch_end = self.batch_index, self.batch_index + batch_size
         pitcher_ids = self.pitcher_ids[batch_start:batch_end]
@@ -124,7 +156,14 @@ class PitchData(object):
         self.reached_end = False
         self.batch_index = 0
 
-    def shuffle(self):
+    def shuffle(self, random_seed=None):
+        """Randomly permute the data.
+
+        Inputs:
+            random_seed: Random seed to use when permuting.
+        """
+        if random_seed:
+            np.random.seed(random_seed)
         new_order = np.random.permutation(self.num_observations)
         self.pitch_data = self.pitch_data[new_order, :]
         self.batter_ids = self.batter_ids[new_order]
@@ -132,6 +171,7 @@ class PitchData(object):
         self.pitch_outcomes = self.pitch_outcomes[new_order]
 
     def as_dict(self):
+        """Return a dictionary representation of the object."""
         return {"pitch_data": self.pitch_data, "pitch_outcomes": self.pitch_outcomes,
                 "batter_ids": self.batter_ids, "pitcher_ids": self.pitcher_ids,
                 "batters": self.batters, "pitchers": self.pitchers,
@@ -140,6 +180,7 @@ class PitchData(object):
 
     @classmethod
     def from_dict(cls, dict_):
+        """Constructor from a dictionary representation."""
         return cls(**dict_)
 
 
@@ -233,6 +274,7 @@ class PitchDataGenerator(object):
         self.pitch_data.append(full_state)
 
     def _add_pitch_outcome(self, pitch):
+        # Mnemonic: outcomes are ordered by how close they were to yielding fair contact.
         if pitch.pitch_event in ["ball", "hit by pitch"]:
             outcome = 0
         elif pitch.pitch_event == "strike":
