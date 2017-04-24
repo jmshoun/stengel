@@ -13,16 +13,15 @@ from ..sim import player
 class PitchData(object):
     # List of all column names (in order) in the generated arrays.
     variable_names = ["inning", "outs", "balls", "strikes", "score_away_team", "score_home_team",
-                      "runner_on_first", "runner_on_second", "runner_on_third", "pitcher_id",
-                      "pitch_count_game", "pitch_count_at_bat", "pickoff_count_game",
-                      "pickoff_count_at_bat", "pitcher_age", "pitcher_mlb_tenure",
-                      "pitcher_height", "pitcher_weight", "pitcher_bats", "pitcher_throws",
-                      "batter_id", "batter_age", "batter_mlb_tenure", "batter_height",
-                      "batter_weight", "batter_bats", "batter_throws", "start_speed", "end_speed",
-                      "strike_zone_top", "strike_zone_bottom", "delta_x", "delta_z", "plate_x",
-                      "plate_z", "start_x", "start_y", "start_z", "velocity_x", "velocity_y",
-                      "velocity_z", "accel_x", "accel_y", "accel_z", "break_y", "break_angle",
-                      "break_length", "spin_direction", "spin_rate", "pitch_outcome"]
+                      "runner_on_first", "runner_on_second", "runner_on_third", "pitch_count_game",
+                      "pitch_count_at_bat", "pickoff_count_game", "pickoff_count_at_bat",
+                      "pitcher_age", "pitcher_mlb_tenure", "pitcher_height", "pitcher_weight",
+                      "pitcher_bats", "pitcher_throws", "batter_age", "batter_mlb_tenure",
+                      "batter_height", "batter_weight", "batter_bats", "batter_throws",
+                      "start_speed", "end_speed", "strike_zone_top", "strike_zone_bottom",
+                      "delta_x", "delta_z", "plate_x", "plate_z", "start_x", "start_y", "start_z",
+                      "velocity_x", "velocity_y", "velocity_z", "accel_x", "accel_y", "accel_z",
+                      "break_y", "break_angle", "break_length", "spin_direction", "spin_rate"]
 
     def __init__(self, pitch_data=None, pitcher_ids=None, batter_ids=None, pitch_outcomes=None,
                  batters=None, pitchers=None, pitch_density=None, shuffle_each_epoch=True):
