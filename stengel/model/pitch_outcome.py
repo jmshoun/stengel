@@ -11,8 +11,9 @@ class PitchOutcomeModel(object):
     num_outcomes = 5
 
     def __init__(self, batch_size=32, learning_rate=0.1, hidden_nodes=[96],
-                 num_batters=None, batter_embed_size=16,
-                 num_pitchers=None, pitcher_embed_size=16, density_size=None):
+                 num_batters=None, batter_embed_size=16, num_pitchers=None, pitcher_embed_size=16,
+                 density_size=None, density_hidden_nodes=None):
+        """Default constrtuctor."""
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.hidden_nodes = hidden_nodes
@@ -21,6 +22,7 @@ class PitchOutcomeModel(object):
         self.num_pitchers = num_pitchers
         self.pitcher_embed_size = pitcher_embed_size
         self.density_size = density_size
+        self.density_hidden_nodes = density_hidden_nodes
 
         self.graph = tf.Graph()
         with self.graph.as_default():
@@ -69,7 +71,13 @@ class PitchOutcomeModel(object):
     def _build_density_input(self):
         density = tf.placeholder(tf.float32, shape=[self.batch_size] + self.density_size,
                                  name="pitch_density")
-        return density
+        if self.density_hidden_nodes:
+            density_outputs = [density]
+            for num_nodes in self.density_hidden_nodes:
+                density_outputs.append(self._build_hidden_layer(density_outputs[-1], num_nodes))
+            return density_outputs[-1]
+        else:
+            return density
 
     @staticmethod
     def _build_hidden_layer(hidden_input, hidden_nodes):
