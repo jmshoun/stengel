@@ -22,6 +22,14 @@ Stengel also requires access to the following non-Python dependencies:
 
 - mongodb
 
+### Project Structure
+
+Here's a brief overview of the project structure:
+- **`stengel/`**: Python module with all of the core functionality for the project.
+- **`test/`**: Unit tests for the stengel module.
+- **`test_data/`**: Data used by unit tests. The actual data used by the project is in the `data/` folder, which is not kept on GitHub for obvious reasons. The scripts in this repo should make recreating the full data relatively easy.
+- **`notebooks/`**: Jupyter notebooks with documentation of some of the key statistical decisions made in the project.
+- **`scripts/`**: Python scripts to handle common tasks associated with managing Stengel, such as downloading and parsing data. Eventually, scripts for fitting production models will also go in this folder.
 
 ### Potential Use Cases
 
