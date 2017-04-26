@@ -2,6 +2,7 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 import math
 import datetime
+import functools
 
 import numpy as np
 import tensorflow as tf
@@ -65,8 +66,8 @@ class PitchOutcomeModel(object):
         hidden_outputs = [data]
         for num_nodes in self.hidden_nodes:
             hidden_outputs.append(self._build_hidden_layer(hidden_outputs[-1], num_nodes))
-        logit_output = self._build_output_layer(hidden_outputs[-1])
-        self.loss = self._build_loss(logit_output, outcomes)
+        self.logit_output = self._build_output_layer(hidden_outputs[-1])
+        self.loss = self._build_loss(self.logit_output, outcomes)
         self.optimizer = tf.train.AdagradOptimizer(self.learning_rate).minimize(self.loss)
 
     def _build_inputs(self):
@@ -179,6 +180,25 @@ class PitchOutcomeModel(object):
             loss = self.session.run([self.loss], feed_dict=input_dict)
             scores.append(loss)
         return math.exp(np.mean(scores))
+
+    def predict(self, data):
+        """Predict outcomes for a data set.
+
+        Inputs:
+            data: PitchData object with data to predict.
+        Returns:
+            A NumPy array with dimensions of [number of observations in data] by 5. Each row
+            is an observation, and each column is the logit of a prediction for a particular
+            output.
+        """
+        predictions = []
+        while not data.has_reached_end():
+            input_dict = self._filter_input_dict(data.get_batch(self.batch_size))
+            pred_logits = self.session.run([self.logit_output], feed_dict=input_dict)
+            pred_unnormed = np.exp(np.reshape(pred_logits, [-1, self.num_outcomes]))
+            prediction = pred_unnormed / np.sum(pred_unnormed, axis=1, keepdims=True)
+            predictions.append(prediction)
+        return functools.reduce(lambda x, y: np.append(x, y, axis=0), predictions)
 
     def _filter_input_dict(self, input_dict):
         for k in input_dict.keys():
