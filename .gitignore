@@ -94,3 +94,5 @@ ENV/
 # Raw data for the project
 /data/
 
+# Fitted models
+/model_fits/
