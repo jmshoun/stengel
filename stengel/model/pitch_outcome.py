@@ -26,9 +26,9 @@ class PitchOutcomeModel(object):
             hidden layer on the pitch density inputs before it's concatenated with the rest
             of the inputs.
         graph: Tensorflow graph object with the model graph.
+        saver: A TensorFlow saver object for saving model variables.
         session: Tensorflow session object.
         node_names: List with names of all nodes in the graph.
-        initialized: bool: Whether the global variables in the graph have been initialized.
         fit_log: Dictionary with names "batch_number" (list of batch numbers after which
             validation was scored) and "validation_score" (list of validation scores aligned
             with batch_number).
@@ -40,7 +40,7 @@ class PitchOutcomeModel(object):
     def __init__(self, batch_size=32, learning_rate=0.1, hidden_nodes=[96],
                  num_batters=None, batter_embed_size=16, num_pitchers=None, pitcher_embed_size=16,
                  density_size=None, density_hidden_nodes=None):
-        """Default constrtuctor."""
+        """Default construtuctor."""
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.hidden_nodes = hidden_nodes
@@ -54,9 +54,10 @@ class PitchOutcomeModel(object):
         self.graph = tf.Graph()
         with self.graph.as_default():
             self._build_graph()
-        self.session = tf.Session(graph=self.graph)
+            self.session = tf.Session(graph=self.graph)
+            self.saver = tf.train.Saver()
+            self.session.run(tf.global_variables_initializer())
         self.node_names = [node.name + ":0" for node in self.graph.as_graph_def().node]
-        self.initialized = False
         self.fit_log = {"batch_number": [],
                         "validation_score": []}
         self.fit_time = None
@@ -144,19 +145,14 @@ class PitchOutcomeModel(object):
             print_every: How often to calculate and show validation results.
         """
         start_time = datetime.datetime.now()
-
-        with self.graph.as_default():
-            if not self.initialized:
-                self.session.run(tf.global_variables_initializer())
-                self.initialized = True
-            current_step = 0
-            while current_step < training_steps:
-                self._train_steps(train_data, print_every)
-                current_step += print_every
-                current_score = self.score(validation_data)
-                print("{:>7} - {:0.4f}".format(current_step, round(current_score, 4)))
-                self.fit_log["batch_number"].append(current_step)
-                self.fit_log["validation_score"].append(current_score)
+        current_step = 0
+        while current_step < training_steps:
+            self._train_steps(train_data, print_every)
+            current_step += print_every
+            current_score = self.score(validation_data)
+            print("{:>7} - {:0.4f}".format(current_step, round(current_score, 4)))
+            self.fit_log["batch_number"].append(current_step)
+            self.fit_log["validation_score"].append(current_score)
 
         end_time = datetime.datetime.now()
         self.fit_time = (end_time - start_time).total_seconds()
@@ -199,6 +195,15 @@ class PitchOutcomeModel(object):
             prediction = pred_unnormed / np.sum(pred_unnormed, axis=1, keepdims=True)
             predictions.append(prediction)
         return functools.reduce(lambda x, y: np.append(x, y, axis=0), predictions)
+
+    def save(self, filename):
+        """Save the values of all model variables to a file."""
+        # TODO: Create folder if it doesn't exist
+        self.saver.save(self.session, filename)
+
+    def restore(self, filename):
+        """Restore the values of all model variables from a file."""
+        self.saver.restore(self.session, filename)
 
     def _filter_input_dict(self, input_dict):
         for k in input_dict.keys():
