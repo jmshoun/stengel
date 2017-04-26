@@ -62,8 +62,8 @@ class PitchOutcomeModel(object):
 
     def _build_graph(self):
         data, outcomes = self._build_inputs()
-        hidden_outputs = [self._build_hidden_layer(data, self.hidden_nodes[0])]
-        for num_nodes in self.hidden_nodes[1:]:
+        hidden_outputs = [data]
+        for num_nodes in self.hidden_nodes:
             hidden_outputs.append(self._build_hidden_layer(hidden_outputs[-1], num_nodes))
         logit_output = self._build_output_layer(hidden_outputs[-1])
         self.loss = self._build_loss(logit_output, outcomes)
