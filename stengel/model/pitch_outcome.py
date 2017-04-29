@@ -14,6 +14,7 @@ class PitchOutcomeModel(object):
     Attributes:
         batch_size: Batch size for use in model fitting.
         learning_rate: Learning rate passed to the optimizer.
+        dropout_rate: Dropout rate for hidden layers.
         hidden_nodes: List of ints; each element is the number of nodes in the ith hidden layer.
         num_batters: Number of unique batter IDs in the input data. If None, batter embeddings
             will not be used in the model.
@@ -37,12 +38,13 @@ class PitchOutcomeModel(object):
     num_numeric_inputs = 47
     num_outcomes = 5
 
-    def __init__(self, batch_size=32, learning_rate=0.1, hidden_nodes=[96],
+    def __init__(self, batch_size=32, learning_rate=0.1, dropout_rate=0.5, hidden_nodes=[96],
                  num_batters=None, batter_embed_size=16, num_pitchers=None, pitcher_embed_size=16,
                  density_size=None, density_hidden_nodes=None):
-        """Default construtuctor."""
+        """Default constructor."""
         self.batch_size = batch_size
         self.learning_rate = learning_rate
+        self.dropout_rate = dropout_rate
         self.hidden_nodes = hidden_nodes
         self.num_batters = num_batters
         self.batter_embed_size = batter_embed_size
@@ -64,6 +66,7 @@ class PitchOutcomeModel(object):
 
     def _build_graph(self):
         data, outcomes = self._build_inputs()
+        self.dropout = tf.placeholder(tf.float32, None, name="dropout")
         hidden_outputs = [data]
         for num_nodes in self.hidden_nodes:
             hidden_outputs.append(self._build_hidden_layer(hidden_outputs[-1], num_nodes))
@@ -110,14 +113,13 @@ class PitchOutcomeModel(object):
         else:
             return density
 
-    @staticmethod
-    def _build_hidden_layer(hidden_input, hidden_nodes):
+    def _build_hidden_layer(self, hidden_input, hidden_nodes):
         input_dim = hidden_input.get_shape().as_list()
         hidden_weight = tf.Variable(tf.random_normal([input_dim[1], hidden_nodes], stddev=0.05))
         hidden_bias = tf.Variable(tf.random_normal([hidden_nodes], stddev=0.1))
         hidden_logits = tf.matmul(hidden_input, hidden_weight) + hidden_bias
         hidden_scores = tf.nn.sigmoid(hidden_logits)
-        hidden_output = tf.nn.dropout(hidden_scores, 0.5)
+        hidden_output = tf.nn.dropout(hidden_scores, self.dropout)
         return hidden_output
 
     def _build_output_layer(self, input_):
@@ -160,6 +162,7 @@ class PitchOutcomeModel(object):
     def _train_steps(self, train_data, num_steps):
         for _ in range(num_steps):
             input_dict = self._filter_input_dict(train_data.get_batch(self.batch_size))
+            input_dict["dropout:0"] = self.dropout_rate
             _, loss = self.session.run([self.optimizer, self.loss], feed_dict=input_dict)
 
     def score(self, data):
@@ -173,6 +176,7 @@ class PitchOutcomeModel(object):
         scores = []
         while not data.has_reached_end():
             input_dict = self._filter_input_dict(data.get_batch(self.batch_size))
+            input_dict["dropout:0"] = 1.0
             loss = self.session.run([self.loss], feed_dict=input_dict)
             scores.append(loss)
         return math.exp(np.mean(scores))
@@ -190,6 +194,7 @@ class PitchOutcomeModel(object):
         predictions = []
         while not data.has_reached_end():
             input_dict = self._filter_input_dict(data.get_batch(self.batch_size))
+            input_dict["dropout:0"] = 1.0
             pred_logits = self.session.run([self.logit_output], feed_dict=input_dict)
             pred_unnormed = np.exp(np.reshape(pred_logits, [-1, self.num_outcomes]))
             prediction = pred_unnormed / np.sum(pred_unnormed, axis=1, keepdims=True)
