@@ -5,7 +5,7 @@ test:
     coverage report
 
 install:
-	cp -r stengel/ ~/.local/lib/python2.7/site-packages
+	cp -r stengel/ ~/.local/lib/python3.6/site-packages
 
 clean:
-	rm -r ~/.local/lib/python2.7/site-packages/stengel
+	rm -r ~/.local/lib/python3.6/site-packages/stengel

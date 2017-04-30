@@ -1,6 +1,3 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
 """Static module-level variables enumerating possible batter states after a pitch.
 
 FIRST_, SECOND_, and THIRD_BASE correspond with their indices in Bases.bases. HOME_PLATE is 3

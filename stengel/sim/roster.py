@@ -1,6 +1,3 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
 from . import serialize
 
 """Static module-level variables mapping position names to Roster indices.

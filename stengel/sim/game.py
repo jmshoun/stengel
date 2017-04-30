@@ -1,6 +1,3 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
 import os
 import xml.etree.ElementTree as ET
 import copy
@@ -11,7 +8,6 @@ from . import roster
 from . import play
 from . import sub
 from . import pitch
-from . import bases
 
 
 class Game(object):
