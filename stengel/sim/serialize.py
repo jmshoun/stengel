@@ -30,19 +30,25 @@ class DictSerialize(object):
         """Convert an object to a dictionary representation."""
         object_dict = copy.deepcopy(self.__dict__)
         # Convert the attribute objects to dictionaries recursively.
+        keys_to_delete = []
         for k, v in object_dict.items():
             if k in self.attribute_objects:
-                # If v is None, we cna drop it from the dict.
+                # If v is None, we can drop it from the dict.
                 if v:
                     object_dict[k] = v.as_dict()
                 else:
-                    del object_dict[k]
+                    keys_to_delete.append(k)
+
+        for k in keys_to_delete:
+            del object_dict[k]
+
         return object_dict
 
     @classmethod
     def from_dict(cls, dict_):
         """Instantiate an object from a dictionary representation of itself."""
         dict_ = copy.deepcopy(dict_)
+        keys_to_delete = []
         for attribute in dict_.keys():
             # Convert the attribute objects from dictionaries back to objects. For each
             # attribute object, the parent object should have a corresponding class method
@@ -51,5 +57,9 @@ class DictSerialize(object):
             if attribute in cls.attribute_objects and dict_[attribute]:
                 dict_[attribute] = getattr(cls, "_from_dict_" + attribute)(dict_[attribute])
             elif attribute in cls.unpassed_attributes:
-                del dict_[attribute]
+                keys_to_delete.append(attribute)
+
+        for k in keys_to_delete:
+            del dict_[k]
+
         return cls(**dict_)
