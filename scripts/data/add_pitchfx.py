@@ -35,12 +35,17 @@ game_set = database.games.find({
 })
 num_games = game_set.count()
 
+processed_game_ids = []
 # Add the PitchFx data to each of the games
 with progressbar.ProgressBar(max_value=num_games) as bar:
     game_number = 0
     for game_record in game_set:
         bar.update(game_number)
         game = stengel.sim.game.Game.from_dict(game_record)
+        if game.metadata.id_ in processed_game_ids:
+            continue
+
+        processed_game_ids.append(game.metadata.id_)
         game.add_pitch_fx("data/gameday/pitches")
-        game.update(database)
+        database.games.update({"metadata.id_": game.metadata.id_}, game.as_dict())
         game_number += 1

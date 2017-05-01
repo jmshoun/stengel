@@ -39,14 +39,6 @@ class Game(object):
     def __str__(self):
         return str(self.game_status)
 
-    def update(self, database):
-        """Update the representation of the game in a database.
-
-        Args:
-            database: Database in which to update the game record.
-        """
-        database.games.update({"metadata.id_": self.metadata.id_}, self.as_dict())
-
     # Event handling methods
 
     def reset(self):
