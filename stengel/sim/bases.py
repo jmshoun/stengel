@@ -46,14 +46,13 @@ class Bases(object):
         return runs_and_outs.runs, runs_and_outs.outs
 
     def _move_base_runner(self, start_base, end_base, reverse=False):
-        # Some baserunning moves are retrograde. These are processed iff reverse=True.
         runner = self.bases[start_base]
-        reverse_motion = FIRST_BASE <= end_base < start_base
-        if runner and end_base is not None and reverse_motion == reverse:
-            self.bases[start_base] = None
-            return self._move_runner(runner, end_base)
-        else:
-            return RunsAndOuts()
+        if runner and end_base is not None:
+            reverse_motion = FIRST_BASE <= end_base < start_base
+            if reverse_motion == reverse:
+                self.bases[start_base] = None
+                return self._move_runner(runner, end_base)
+        return RunsAndOuts()
 
     def _move_runner(self, runner, end_base):
         if end_base == HOME_PLATE:
