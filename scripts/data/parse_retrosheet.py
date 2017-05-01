@@ -18,7 +18,7 @@ def get_event_files(first_year, last_year):
 
 # Set up argument parser
 arg_parser = argparse.ArgumentParser(description="Parse one or years of Retrosheet event data.")
-arg_parser.add_argument("-f", "--first-year", type=int, default=0001,
+arg_parser.add_argument("-f", "--first-year", type=int, default=1,
                         help="""First year of Retrosheet events to parse. Default is the earliest
                         event file in data/retrosheet.""")
 arg_parser.add_argument("-l", "--last-year", type=int, default=9999,
