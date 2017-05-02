@@ -40,7 +40,7 @@ pitch_data = generator.generate_data(
     args.last_date.strftime("%Y/%m/%d"))
 
 print("Saving pitch data...")
-destination_directory = os.path.join(*args.output.split("/")[-1])
+destination_directory = os.path.join(*args.output.split("/")[:-1])
 stengel.data.download.create_directory_if_needed(destination_directory)
-with file(args.output, "wb") as outfile:
+with open(args.output, "wb") as outfile:
     pickle.dump(pitch_data.as_dict(), outfile, pickle.HIGHEST_PROTOCOL)
