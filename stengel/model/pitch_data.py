@@ -16,6 +16,7 @@ class PitchData(object):
         pitcher_ids: 1D NumPy int array of pitcher IDs for each pitch.
         batter_ids: 1D NumPy int array of batter IDs for each pitch.
         pitch_outcomes: 1D NumPy int array of outcomes for each pitch.
+        game_dates: 1D NumPy datetime64 array of outcomes for each pitch.
         batters: List of Retrosheet IDs that correspond to each batter ID.
         pitchers: List of Retrosheet IDs that correspond to each pitcher ID.
         pitch_density: Optional; dicionary with keys of pitcher Retrosheet IDs and values of
@@ -40,13 +41,14 @@ class PitchData(object):
                       "velocity_x", "velocity_y", "velocity_z", "accel_x", "accel_y", "accel_z",
                       "break_y", "break_angle", "break_length", "spin_direction", "spin_rate"]
 
-    def __init__(self, pitch_data=None, pitcher_ids=None, batter_ids=None, pitch_outcomes=None,
+    def __init__(self, pitch_data=None, pitcher_ids=None, batter_ids=None, pitch_outcomes=None, game_dates=None,
                  batters=None, pitchers=None, pitch_density=None, shuffle_each_epoch=True):
         """Default constructor."""
         self.pitch_data = [] if pitch_data is None else pitch_data
         self.pitcher_ids = [] if pitcher_ids is None else pitcher_ids
         self.batter_ids = [] if batter_ids is None else batter_ids
         self.pitch_outcomes = [] if pitch_outcomes is None else pitch_outcomes
+        self.game_dates = [] if game_dates is None else game_dates
         self.batters = [] if batters is None else batters
         self.pitchers = [] if pitchers is None else pitchers
         self.pitch_density = pitch_density
@@ -80,6 +82,7 @@ class PitchData(object):
         result.pitcher_ids = self.pitcher_ids[filter_]
         result.batter_ids = self.batter_ids[filter_]
         result.pitch_outcomes = self.pitch_outcomes[filter_]
+        result.game_dates = self.game_dates[filter_]
         result.num_observations = result.pitch_outcomes.shape[0]
         if reassign_ids:
             result = self._reassign_ids(result)
@@ -166,14 +169,14 @@ class PitchData(object):
         self.batter_ids = self.batter_ids[new_order]
         self.pitcher_ids = self.pitcher_ids[new_order]
         self.pitch_outcomes = self.pitch_outcomes[new_order]
+        self.game_dates = self.game_dates[new_order]
 
     def as_dict(self):
         """Return a dictionary representation of the object."""
         return {"pitch_data": self.pitch_data, "pitch_outcomes": self.pitch_outcomes,
                 "batter_ids": self.batter_ids, "pitcher_ids": self.pitcher_ids,
-                "batters": self.batters, "pitchers": self.pitchers,
-                "pitch_density": self.pitch_density,
-                "shuffle_each_epoch": self.shuffle_each_epoch}
+                "game_date": self.game_dates, "batters": self.batters, "pitchers": self.pitchers,
+                "pitch_density": self.pitch_density, "shuffle_each_epoch": self.shuffle_each_epoch}
 
     @classmethod
     def from_dict(cls, dict_):
@@ -187,6 +190,7 @@ class PitchDataGenerator(object):
         self.pitcher_ids = []
         self.batter_ids = []
         self.pitch_outcomes = []
+        self.game_dates = []
         self.batters = []
         self.pitchers = []
 
@@ -200,7 +204,7 @@ class PitchDataGenerator(object):
         self._add_pitches_from_records()
         self._convert_data_types()
         return PitchData(self.pitch_data, self.pitcher_ids, self.batter_ids, self.pitch_outcomes,
-                         self.batters, self.pitchers)
+                         self.game_dates, self.batters, self.pitchers)
 
     def _get_game_records(self, first_date, last_date):
         self.game_records = self.database.games.find({
@@ -220,6 +224,7 @@ class PitchDataGenerator(object):
         self.batter_ids = np.array(self.batter_ids, dtype="int32")
         self.pitcher_ids = np.array(self.pitcher_ids, dtype="int32")
         self.pitch_outcomes = np.array(self.pitch_outcomes, dtype="int32")
+        self.game_dates = np.array(self.game_dates, dtype="datetime64")
         self.pitch_data = np.array(self.pitch_data)
 
     def _add_game_pitches(self, game_record):
@@ -242,6 +247,7 @@ class PitchDataGenerator(object):
         self._add_batter_id(current_game.game_status.batter)
         self._add_pitch_data(current_game, pitch)
         self._add_pitch_outcome(pitch)
+        self._add_game_date(current_game.game_status)
 
     def _add_pitcher_id(self, pitcher):
         if pitcher in self.pitchers:
@@ -258,6 +264,9 @@ class PitchDataGenerator(object):
             self.batters.append(batter)
             batter_id = len(self.batters) - 1
         self.batter_ids.append(batter_id)
+
+    def _add_game_date(self, game_status):
+        self.game_dates.append(game_status.game_date)
 
     def _add_pitch_data(self, current_game, pitch):
         game_status = current_game.game_status
