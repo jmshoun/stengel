@@ -35,7 +35,7 @@ class TestSerialization(unittest.TestCase):
         self.assertEqual(obj.as_dict(), {"a": 2, "b": 3, "c": 6})
 
     def test_from_dict(self):
-        obj = SerializerTestClass.from_dict({"a": 2, "b": 3})
+        obj = SerializerTestClass.from_dict({"a": 2, "b": 3, "c": 5})
         self.assertEqual(obj.__dict__, SerializerTestClass(2, 3).__dict__)
 
     def test_to_dict_with_recursion(self):
@@ -54,3 +54,7 @@ class TestSerialization(unittest.TestCase):
     def test_to_dict_with_missing_recursion(self):
         obj = SerializerTestSuperClass(11)
         self.assertEqual(obj.as_dict(), {"e": 11})
+
+    def test_from_dict_with_missing_recursion(self):
+        obj = SerializerTestSuperClass(17)
+        self.assertEqual(obj.as_dict(), {"e": 17, })
