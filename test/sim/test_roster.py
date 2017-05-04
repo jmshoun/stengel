@@ -7,6 +7,7 @@ parent_directory = os.path.abspath(os.path.join(sys.path[0], os.pardir))
 sys.path.insert(0, parent_directory)
 
 import stengel.sim.roster as roster
+import stengel.sim.sub as sub
 
 
 def load_test_rosters():
@@ -41,4 +42,9 @@ class TestRoster(unittest.TestCase):
             home_roster.move_to_next_batter()
         self.assertEqual(home_roster.current_batter(), "guerv001")
 
-    # TODO: Add test cases for substitutions
+    def test_substitution(self):
+        substitution = sub.Substitution.from_retrosheet(["sub", "melam001", "Mark Melancon", "0", "0", "1"])
+        away_roster = roster.Roster.from_retrosheet(test_roster_rows["away"])
+        away_roster.substitute(substitution)
+        self.assertEqual(away_roster.current_pitcher(), "melam001")
+        self.assertEqual(away_roster.relieved, ["bradd002"])
